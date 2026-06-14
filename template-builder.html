@@ -1,0 +1,1347 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Template Builder</title>
+  <style>
+    @media print {
+      body > div,
+      body > div > section:first-child { display: none !important; }
+      body > div > section:last-child {
+        border: none !important;
+        position: static !important;
+        flex: none !important;
+      }
+      #preview-wrapper {
+        position: static !important;
+        overflow: visible !important;
+        padding: 0 !important;
+        background: #fff !important;
+      }
+      #contract-content {
+        box-shadow: none !important;
+        max-width: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        margin-bottom: 0 !important;
+      }
+      .bloco-controles, .edit-ui { display: none !important; }
+      div[style*="position: absolute; bottom: 0"] { display: none !important; }
+      div[style*="padding: 16px 16px 8px"] { display: none !important; }
+    }
+  </style>
+  <style>
+    * { font-family: Arial, Helvetica, sans-serif; }
+
+    /* --- Preview: aparência de documento impresso --- */
+    #preview-wrapper {
+      background: #e8e8e8;
+      padding: 24px 24px 48px;
+      min-height: 100%;
+      box-sizing: border-box;
+    }
+
+    #contract-content {
+      background: #fff;
+      max-width: 680px;
+      margin: 0 auto;
+      padding: 48px 56px 64px;
+      margin-bottom: 100px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.18);
+      font-family: Arial, Helvetica, sans-serif;
+      font-size: 11pt;
+      line-height: 1.5;
+      color: #000;
+    }
+
+    /* Blocos de seção */
+    #contract-content .bloco[data-type="secao"] p {
+      text-align: center;
+      font-weight: bold;
+      text-transform: uppercase;
+      margin: 24px 0 16px;
+      font-size: 11pt;
+    }
+
+    /* Blocos de cláusula por nível */
+    #contract-content .bloco[data-type="clausula"] p {
+      text-align: justify;
+      margin: 6px 0 14px;
+      font-size: 11pt;
+    }
+
+    #contract-content .bloco[data-type="clausula"][data-level="segundo"] p {
+      margin-left: 24px;
+    }
+
+    #contract-content .bloco[data-type="clausula"][data-level="terceiro"] p {
+      margin-left: 48px;
+    }
+
+    /* Índice em negrito */
+    #contract-content .bloco-indice {
+      font-weight: bold;
+    }
+
+    /* Controles flutuantes: não afetam o layout do texto */
+    #contract-content .bloco-controles {
+      font-size: 9pt;
+      margin-bottom: 2px;
+    }
+
+    /* Blocos não são selecionáveis — garante drag no bloco inteiro */
+    #contract-content .bloco {
+      user-select: none;
+    }
+
+    /* Campo de edição inline */
+    #contract-content .edit-ui {
+      font-family: Arial, Helvetica, sans-serif;
+      font-size: 11pt;
+    }
+
+    /* Dentro do modo de edição, texto deve ser selecionável */
+    #contract-content .edit-ui [contenteditable] {
+      user-select: text;
+    }
+  </style>
+</head>
+<body style="margin: 0; overflow: hidden;">
+
+  <div style="display: flex; height: 100vh;">
+
+    <!-- Formulário -->
+    <section style="flex: 1; padding: 16px; overflow-y: auto;">
+      <h2>Campos do Template</h2>
+
+      <form>
+
+        <!-- 1. Tipo de Template -->
+        <fieldset>
+          <legend>Tipo de Template</legend>
+          <label><input type="radio" name="tipo_template" value="novo"> Novo template</label>
+          <div id="custom-templates-list"></div>
+        </fieldset>
+
+        <div style="margin-bottom: 16px;"></div>
+
+        <div id="campos-template" style="display: none;">
+
+          <!-- 2. Status do Template -->
+          <fieldset>
+            <legend>Status do Template</legend>
+            <label><input type="radio" name="status_template" value="inativo"> Inativo</label><br>
+            <label><input type="radio" name="status_template" value="ativo"> Ativo</label>
+          </fieldset>
+
+          <br>
+
+          <!-- 3. Versão do Template -->
+          <fieldset>
+            <legend>Versão do Template</legend>
+            <label><input type="radio" name="versao_template" value="major"> Major (ex: v16)</label><br>
+            <label><input type="radio" name="versao_template" value="minor"> Minor (ex: v15.9)</label>
+          </fieldset>
+
+          <br>
+
+          <!-- 4. Tipo do Bloco -->
+          <fieldset>
+            <legend>Tipo do Bloco</legend>
+            <label><input type="radio" name="tipo_bloco" value="secao"> Seção</label>
+            <label><input type="radio" name="tipo_bloco" value="clausula"> Cláusula</label>
+          </fieldset>
+
+          <br>
+
+          <!-- 5a. Campo Seção -->
+          <div id="campo-secao" style="display: none;">
+            <label>Título da Seção</label><br>
+            <div id="toolbar-secao">
+              <button type="button" onclick="document.execCommand('bold')"><b>B</b></button>
+              <button type="button" onclick="document.execCommand('italic')"><i>I</i></button>
+              <button type="button" onclick="document.execCommand('underline')"><u>U</u></button>
+            </div>
+            <div id="editor-secao" contenteditable="true" style="border: 1px solid black; min-height: 60px; padding: 4px;"></div>
+          </div>
+
+          <!-- 5b. Campo Cláusula -->
+          <div id="campo-clausula" style="display: none;">
+            <label>Conteúdo da Cláusula</label><br>
+            <div id="toolbar-clausula">
+              <button type="button" onclick="document.execCommand('bold')"><b>B</b></button>
+              <button type="button" onclick="document.execCommand('italic')"><i>I</i></button>
+              <button type="button" onclick="document.execCommand('underline')"><u>U</u></button>
+            </div>
+            <div id="editor-clausula" contenteditable="true" style="border: 1px solid black; min-height: 120px; padding: 4px;"></div>
+            <div id="lista-variaveis" style="display: none;">
+              <br>
+              <label>Variáveis encontradas no conteúdo:</label>
+              <ul id="lista-variaveis-items"></ul>
+            </div>
+          </div>
+
+          <br>
+
+          <!-- Botão Adicionar -->
+          <button type="button" id="btn-adicionar">Adicionar</button>
+
+        </div>
+
+      </form>
+    </section>
+
+    <!-- Preview -->
+    <section style="flex: 1; border-left: 1px solid #000; position: relative;">
+      <div style="padding: 16px 16px 8px; border-bottom: 1px solid #ddd;">
+        <h2 style="margin: 0;">Preview</h2>
+      </div>
+      <div id="preview-wrapper" style="position: absolute; top: 53px; bottom: 53px; left: 0; right: 0; overflow-y: auto;">
+        <div id="contract-content"></div>
+      </div>
+      <div id="modal-salvar" style="display:none; position:absolute; bottom:53px; left:0; right:0; background:#fff; border-top:1px solid #ddd; padding:12px 16px;">
+        <label style="font-size:12px;">Nome do template:</label><br>
+        <input id="input-nome-template" type="text" style="width:100%; margin-top:4px; padding:4px; box-sizing:border-box;">
+        <div style="margin-top:8px; text-align:right;">
+          <button id="btn-modal-cancelar" type="button">Cancelar</button>
+          <button id="btn-modal-confirmar" type="button">Salvar</button>
+        </div>
+      </div>
+      <div style="position: absolute; bottom: 0; left: 0; right: 0; padding: 12px 16px; border-top: 1px solid #ddd; background: #fff; display: flex; justify-content: space-between; align-items: center;">
+        <button id="btn-salvar-padrao" type="button">Salvar como padrão</button>
+        <div>
+          <button id="btn-exportar-pdf" type="button" disabled>Exportar PDF</button>
+          <span style="display: inline-block; width: 8px;"></span>
+          <button id="btn-exportar-html" type="button" disabled>Exportar HTML</button>
+        </div>
+      </div>
+    </section>
+
+  </div>
+
+  <script>
+    // --- Exibe campos e reage à seleção de tipo de template ---
+    function onTipoTemplateChange(radio) {
+      document.getElementById('campos-template').style.display = 'block';
+      if (radio.value === 'novo') {
+        setCurrentTemplate(null);
+        // Limpa o preview
+        document.querySelectorAll('#contract-content .bloco').forEach(function(b) { b.remove(); });
+        renumberBlocks();
+        // Limpa seleção dos outros campos
+        document.querySelectorAll('input[name="status_template"]').forEach(function(r) { r.checked = false; });
+        document.querySelectorAll('input[name="versao_template"]').forEach(function(r) { r.checked = false; });
+        document.querySelectorAll('input[name="tipo_bloco"]').forEach(function(r) { r.checked = false; });
+        document.getElementById('campo-secao').style.display    = 'none';
+        document.getElementById('campo-clausula').style.display = 'none';
+        document.getElementById('editor-secao').innerHTML    = '';
+        document.getElementById('editor-clausula').innerHTML = '';
+      }
+      // Templates salvos são carregados pelo listener em addCustomTemplateRadio
+    }
+
+    document.querySelectorAll('input[name="tipo_template"]').forEach(function(radio) {
+      radio.addEventListener('change', function() { onTipoTemplateChange(this); });
+    });
+
+    // --- Marca dirty ao mudar status ou versão ---
+    document.querySelectorAll('input[name="status_template"], input[name="versao_template"]').forEach(function(radio) {
+      radio.addEventListener('change', markDirty);
+    });
+
+    // --- Exibe campo de acordo com tipo do bloco ---
+    document.querySelectorAll('input[name="tipo_bloco"]').forEach(function(radio) {
+      radio.addEventListener('change', function() {
+        document.getElementById('campo-secao').style.display    = this.value === 'secao'    ? 'block' : 'none';
+        document.getElementById('campo-clausula').style.display = this.value === 'clausula' ? 'block' : 'none';
+      });
+    });
+
+    // --- Formatação de índice (sempre numérico) ---
+    function formatIndex(level, c) {
+      if (level === 'primeiro') return c.l1 + '.';
+      if (level === 'segundo')  return c.l1 + '.' + c.l2 + '.';
+      if (level === 'terceiro') return c.l1 + '.' + c.l2 + '.' + c.l3 + '.';
+    }
+
+    // --- Renumeração ---
+    // Seções reiniciam a contagem dos blocos abaixo delas.
+
+    function formatHTML(html) {
+      const INLINE = new Set(['span','b','i','u','strong','em','a','br']);
+      let indent = 0;
+      const tab = '  ';
+
+      // Tokeniza tags e texto
+      const tokens = html.match(/(<[^>]+>|[^<]+)/g) || [];
+      const lines = [];
+
+      tokens.forEach(function(token) {
+        const isTag = token.startsWith('<');
+        if (!isTag) {
+          const text = token.replace(/\s+/g, ' ').trim();
+          if (text) lines.push(tab.repeat(indent) + text);
+          return;
+        }
+
+        const isClose   = token.startsWith('</');
+        const isSelf    = /\/>$/.test(token);
+        const tagName   = (token.match(/<\/?([a-zA-Z][a-zA-Z0-9-]*)/) || [])[1] || '';
+        const isInline  = INLINE.has(tagName.toLowerCase());
+
+        if (isClose && !isInline) {
+          indent = Math.max(0, indent - 1);
+          lines.push(tab.repeat(indent) + token);
+        } else if (isSelf || isInline) {
+          lines.push(tab.repeat(indent) + token);
+        } else {
+          lines.push(tab.repeat(indent) + token);
+          indent++;
+        }
+      });
+
+      return lines.join('\n');
+    }
+
+    // ── Gerador de PDF puro (sem dependências externas) ──────────────────────
+    // Usa Helvetica (fonte built-in do PDF), encoding WinAnsiEncoding (CP1252)
+    // que cobre todos os caracteres portugueses.
+
+    const WIN_ANSI = (function() {
+      const map = {};
+      // Latin-1 (0x00-0xFF) é base; complementa com Windows-1252 extras
+      const extras = {
+        '€':128,'‚':130,'ƒ':131,'„':132,'…':133,
+        '†':134,'‡':135,'ˆ':136,'‰':137,'Š':138,
+        '‹':139,'Œ':140,'Ž':142,'‘':145,'’':146,
+        '“':147,'”':148,'•':149,'–':150,'—':151,
+        '˜':152,'™':153,'š':154,'›':155,'œ':156,
+        'ž':158,'Ÿ':159
+      };
+      for (let i = 0; i < 256; i++) map[String.fromCharCode(i)] = i;
+      Object.assign(map, extras);
+      return map;
+    })();
+
+    function encodeWinAnsi(str) {
+      const bytes = [];
+      for (let i = 0; i < str.length; i++) {
+        const b = WIN_ANSI[str[i]];
+        bytes.push(b !== undefined ? b : 63); // '?' para desconhecidos
+      }
+      return bytes;
+    }
+
+    function pdfStr(str) {
+      // Retorna string PDF entre parênteses com escape dos bytes
+      const bytes = encodeWinAnsi(str);
+      let out = '(';
+      for (const b of bytes) {
+        if (b === 40 || b === 41 || b === 92) out += '\\' + String.fromCharCode(b);
+        else if (b < 32 || b > 126) out += '\\' + b.toString(8).padStart(3,'0');
+        else out += String.fromCharCode(b);
+      }
+      return out + ')';
+    }
+
+    // Largura aproximada de char em Helvetica (em unidades / 1000 pt)
+    const HEL_WIDTHS = (function() {
+      // Caracteres comuns; resto usa 556 (largura média Helvetica)
+      const w = {};
+      '!"#$%&\'()*+,-./:;<=>?@[\\]^_`{|}~'.split('').forEach(function(c){ w[c]=278; });
+      w[' ']=278; w['f']=278; w['i']=222; w['j']=222; w['l']=222; w['r']=333;
+      w['t']=278; w['!']=278; w[',']=278; w['.']=278; w[';']=278; w[':']=278;
+      w['m']=833; w['w']=722; w['M']=833; w['W']=944;
+      return w;
+    })();
+
+    function charWidth(c, bold, fontSize) {
+      const base = HEL_WIDTHS[c] || 556;
+      return (base / 1000) * fontSize * (bold ? 1.05 : 1);
+    }
+
+    function textWidth(str, bold, fontSize) {
+      let w = 0;
+      for (const c of str) w += charWidth(c, bold, fontSize);
+      return w;
+    }
+
+    function wrapText(str, maxWidth, bold, fontSize) {
+      const words = str.split(' ');
+      const lines = [];
+      let cur = '';
+      for (const word of words) {
+        const test = cur ? cur + ' ' + word : word;
+        if (textWidth(test, bold, fontSize) <= maxWidth) {
+          cur = test;
+        } else {
+          if (cur) lines.push(cur);
+          cur = word;
+        }
+      }
+      if (cur) lines.push(cur);
+      return lines.length ? lines : [''];
+    }
+
+    // Extrai runs de texto de um elemento p: [{text, bold, italic, underline}]
+    function extractRuns(pEl) {
+      const runs = [];
+      function walk(node, bold, italic, underline) {
+        if (node.nodeType === 3) {
+          if (node.textContent) runs.push({text: node.textContent, bold, italic, underline});
+        } else {
+          const tag = node.tagName ? node.tagName.toLowerCase() : '';
+          const b2 = bold   || tag === 'b' || tag === 'strong';
+          const i2 = italic || tag === 'i' || tag === 'em';
+          const u2 = underline || tag === 'u';
+          node.childNodes.forEach(function(c){ walk(c, b2, i2, u2); });
+        }
+      }
+      walk(pEl, false, false, false);
+      return runs;
+    }
+
+    function generateContractPDF(blocks) {
+      const PW = 595.28, PH = 841.89;
+      const ML = 56, MR = 56, MT = 56, MB = 56;
+      const TW = PW - ML - MR;
+      const FS = 11;          // font size pt
+      const LH = FS * 1.6;   // line height pt
+
+      const pages = [[]]; // pages[i] = array of PDF content stream lines
+
+      let y = PH - MT; // current y position (PDF y goes up)
+
+      function newPage() {
+        pages.push([]);
+        y = PH - MT;
+      }
+
+      function ensureSpace(needed) {
+        if (y - needed < MB) newPage();
+      }
+
+      function addLine(pdfLine) {
+        pages[pages.length - 1].push(pdfLine);
+      }
+
+      function renderLine(text, bold, xOffset, align) {
+        ensureSpace(LH);
+        const fontName = bold ? '/F2' : '/F1';
+        const x = ML + xOffset;
+        const yPos = y - FS;
+
+        let cmd;
+        if (align === 'center') {
+          const tw = textWidth(text, bold, FS);
+          const cx = ML + (TW - tw) / 2;
+          cmd = 'BT ' + fontName + ' ' + FS + ' Tf ' +
+                cx.toFixed(2) + ' ' + yPos.toFixed(2) + ' Td ' +
+                pdfStr(text) + ' Tj ET';
+        } else {
+          cmd = 'BT ' + fontName + ' ' + FS + ' Tf ' +
+                x.toFixed(2) + ' ' + yPos.toFixed(2) + ' Td ' +
+                pdfStr(text) + ' Tj ET';
+        }
+        addLine(cmd);
+        y -= LH;
+      }
+
+      blocks.forEach(function(block) {
+        const type  = block.dataset.type;
+        const level = block.dataset.level || 'primeiro';
+        const p     = block.querySelector('p');
+        if (!p) return;
+
+        const indexEl = p.querySelector('.bloco-indice');
+        const indexText = indexEl ? (indexEl.textContent + ' ') : '';
+
+        // Texto limpo sem o span do índice
+        const runs = extractRuns(p).filter(function(r) {
+          return !(indexEl && r.text === indexEl.textContent);
+        });
+        const fullText = runs.map(function(r){ return r.text; }).join('');
+        const hasBoldRun = runs.some(function(r){ return r.bold; });
+
+        if (type === 'secao') {
+          // Espaço antes da seção
+          ensureSpace(LH * 2);
+          y -= LH * 0.5;
+          const upper = fullText.toUpperCase();
+          renderLine(upper, true, 0, 'center');
+          y -= LH * 0.5;
+          return;
+        }
+
+        // Cláusula
+        const indent = level === 'segundo' ? 24 : level === 'terceiro' ? 48 : 0;
+        const lineW  = TW - indent;
+        const bold   = hasBoldRun || !!indexText;
+
+        // Primeira linha com índice + início do texto
+        const combined = indexText + fullText;
+        const lines    = wrapText(combined, lineW, false, FS);
+
+        // Linha 1: índice em bold + resto normal (simplificado: tudo numa linha)
+        lines.forEach(function(line, i) {
+          renderLine(line, i === 0 && !!indexText, indent, 'left');
+        });
+
+        y -= LH * 0.3; // espaço entre cláusulas
+      });
+
+      // ── Monta PDF bruto ───────────────────────────────────────────────────
+      // Helvetica regular = F1, Helvetica-Bold = F2
+      const objs = [];
+      let id = 1;
+
+      function obj(content) {
+        objs.push({ id: id++, content });
+        return objs[objs.length - 1];
+      }
+
+      const catalogId = id; obj('<<\n/Type /Catalog\n/Pages 2 0 R\n>>');
+      const pagesId   = id; obj(''); // placeholder
+
+      const pageIds = [];
+      const streamObjs = [];
+
+      pages.forEach(function(lines) {
+        const stream = lines.join('\n');
+        const sId = id;
+        streamObjs.push({ id: sId, stream });
+        obj(''); // placeholder for stream obj
+        const pgId = id;
+        pageIds.push(pgId);
+        obj('<<\n/Type /Page\n/Parent 2 0 R\n/MediaBox [0 0 ' + PW.toFixed(2) + ' ' + PH.toFixed(2) + ']\n' +
+            '/Contents ' + sId + ' 0 R\n' +
+            '/Resources <<\n  /Font <<\n    /F1 << /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>\n' +
+            '    /F2 << /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>\n  >>\n>>\n>>');
+      });
+
+      // Corrige objetos placeholder
+      const pagesContent = '<<\n/Type /Pages\n/Kids [' + pageIds.map(function(p){ return p + ' 0 R'; }).join(' ') + ']\n/Count ' + pageIds.length + '\n>>';
+      objs[1].content = pagesContent;
+
+      // Corrige stream objs
+      streamObjs.forEach(function(s, i) {
+        const encoded = s.stream;
+        objs[s.id - 1].content = '<<\n/Length ' + encoded.length + '\n>>\nstream\n' + encoded + '\nendstream';
+      });
+
+      // Serializa
+      let pdf = '%PDF-1.4\n';
+      const offsets = [];
+      objs.forEach(function(o) {
+        offsets.push(pdf.length);
+        pdf += o.id + ' 0 obj\n' + o.content + '\nendobj\n';
+      });
+
+      const xrefOffset = pdf.length;
+      pdf += 'xref\n0 ' + (objs.length + 1) + '\n';
+      pdf += '0000000000 65535 f \n';
+      offsets.forEach(function(off) {
+        pdf += off.toString().padStart(10, '0') + ' 00000 n \n';
+      });
+      pdf += 'trailer\n<<\n/Size ' + (objs.length + 1) + '\n/Root 1 0 R\n>>\n';
+      pdf += 'startxref\n' + xrefOffset + '\n%%EOF';
+
+      return pdf;
+    }
+
+    document.getElementById('btn-exportar-pdf').addEventListener('click', function() {
+      const btn = this;
+      btn.disabled = true;
+      btn.textContent = 'Gerando...';
+
+      try {
+        const blocks = Array.from(document.querySelectorAll('#contract-content .bloco'));
+        const pdfText = generateContractPDF(blocks);
+
+        // Download como arquivo binário (Latin-1)
+        const bytes = new Uint8Array(pdfText.length);
+        for (let i = 0; i < pdfText.length; i++) {
+          bytes[i] = pdfText.charCodeAt(i) & 0xFF;
+        }
+        const blob = new Blob([bytes], { type: 'application/pdf' });
+        const url  = URL.createObjectURL(blob);
+        const a    = document.createElement('a');
+        a.href     = url;
+        a.download = 'contrato.pdf';
+        a.click();
+        URL.revokeObjectURL(url);
+
+      } catch(e) {
+        alert('Erro ao gerar PDF: ' + e.message);
+      }
+
+      btn.textContent = 'Exportar PDF';
+      btn.disabled    = false;
+    });
+
+    document.getElementById('btn-exportar-html').addEventListener('click', function() {
+      // Lê campos do formulário
+      const tipoEl    = document.querySelector('input[name="tipo_template"]:checked');
+      const statusEl  = document.querySelector('input[name="status_template"]:checked');
+      const versaoEl  = document.querySelector('input[name="versao_template"]:checked');
+
+      const tipoLabel   = tipoEl   ? tipoEl.closest('label').textContent.trim()   : '';
+      const statusLabel = statusEl ? statusEl.closest('label').textContent.trim() : '';
+      const versaoLabel = versaoEl ? versaoEl.closest('label').textContent.trim() : '';
+
+      const meta = document.createElement('div');
+      meta.id = 'template-meta';
+      meta.setAttribute('data-tipo',   tipoEl   ? tipoEl.value   : '');
+      meta.setAttribute('data-status', statusEl ? statusEl.value : '');
+      meta.setAttribute('data-versao', versaoEl ? versaoEl.value : '');
+      meta.innerHTML =
+        '<span data-campo="tipo">'   + tipoLabel   + '</span>' +
+        '<span data-campo="status">' + statusLabel + '</span>' +
+        '<span data-campo="versao">' + versaoLabel + '</span>';
+
+      // Clona contrato e remove UI
+      const clone = document.getElementById('contract-content').cloneNode(true);
+      clone.querySelectorAll('.bloco-controles, .edit-ui, #drop-indicator').forEach(function(el) { el.remove(); });
+      clone.querySelectorAll('.bloco').forEach(function(el) {
+        el.style.outline = '';
+        el.style.boxShadow = '';
+        el.style.cursor = '';
+        el.removeAttribute('draggable');
+        el.removeAttribute('data-editing');
+      });
+
+      const wrapper = document.createElement('div');
+      wrapper.appendChild(meta);
+      wrapper.appendChild(clone);
+
+      const html = formatHTML(wrapper.outerHTML);
+      const blob = new Blob([html], { type: 'text/html' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'contrato.html';
+      a.click();
+      URL.revokeObjectURL(url);
+    });
+
+    function renumberBlocks() {
+      const allBlocos = Array.from(document.querySelectorAll('#contract-content .bloco'));
+
+      // A primeira cláusula da lista (ou após cada seção) deve sempre ser de primeiro nível
+      let forcePrimeiro = true;
+
+      const c = { l1: 0, l2: 0, l3: 0 };
+      allBlocos.forEach(function(block) {
+        if (block.dataset.type === 'secao') {
+          forcePrimeiro = true;
+          return;
+        }
+
+        if (forcePrimeiro) {
+          block.dataset.level = 'primeiro';
+          forcePrimeiro = false;
+        }
+
+        const level = block.dataset.level;
+        if (level === 'primeiro') { c.l1++; c.l2 = 0; c.l3 = 0; }
+        if (level === 'segundo')  { if (c.l1 === 0) c.l1 = 1; c.l2++; c.l3 = 0; }
+        if (level === 'terceiro') { if (c.l1 === 0) c.l1 = 1; if (c.l2 === 0) c.l2 = 1; c.l3++; }
+        block.querySelector('.bloco-indice').textContent = formatIndex(level, c);
+      });
+
+      refreshAllBlockControls();
+      updateExportButton();
+      markDirty();
+    }
+
+    // Garante reset do cursor se o mouse for solto fora de um bloco
+    document.addEventListener('mouseup', function() {
+      document.body.style.cursor = '';
+    });
+
+    // --- Drag and drop ---
+    const preview = document.getElementById('contract-content');
+    let draggedEl = null;
+    let isEditing = false;
+
+    const indicator = document.createElement('div');
+    indicator.id = 'drop-indicator';
+    indicator.style.cssText = 'border-top: 2px dashed black; margin: 2px 0; display: none; pointer-events: none;';
+    preview.appendChild(indicator);
+
+    function nearestBlock(target) {
+      while (target && target !== preview) {
+        if (target.classList && target.classList.contains('bloco')) return target;
+        target = target.parentElement;
+      }
+      return null;
+    }
+
+    preview.addEventListener('dragover', function(e) {
+      e.preventDefault();
+      const target = nearestBlock(e.target);
+      if (!target || target === draggedEl) return;
+      const rect = target.getBoundingClientRect();
+      indicator.style.display = 'block';
+      if (e.clientY < rect.top + rect.height / 2) {
+        preview.insertBefore(indicator, target);
+      } else {
+        preview.insertBefore(indicator, target.nextSibling);
+      }
+    });
+
+    preview.addEventListener('dragleave', function(e) {
+      if (!preview.contains(e.relatedTarget)) indicator.style.display = 'none';
+    });
+
+    preview.addEventListener('drop', function(e) {
+      e.preventDefault();
+      if (draggedEl && indicator.style.display !== 'none') {
+        preview.insertBefore(draggedEl, indicator);
+      }
+      indicator.style.display = 'none';
+      // garante limpeza do estilo mesmo se dragend não disparar
+      if (draggedEl) {
+        clearTimeout(draggedEl._dragTimer);
+        draggedEl.style.outline   = '';
+        draggedEl.style.boxShadow = '';
+        draggedEl.style.cursor    = '';
+      }
+      renumberBlocks();
+    });
+
+    // --- Detecção de variáveis no editor de cláusula ---
+    document.getElementById('editor-clausula').addEventListener('input', function() {
+      const text  = this.innerText;
+      const found = [...new Set(text.match(/\{\{[^}]+\}\}/g) || [])];
+      const lista = document.getElementById('lista-variaveis');
+      const items = document.getElementById('lista-variaveis-items');
+      if (found.length === 0) {
+        lista.style.display = 'none';
+      } else {
+        items.innerHTML = found.map(function(v) { return '<li>' + v + '</li>'; }).join('');
+        lista.style.display = 'block';
+      }
+    });
+
+    // --- Colar sem formatação em qualquer contenteditable ---
+    function handlePaste(e) {
+      e.preventDefault();
+      const text = (e.clipboardData || window.clipboardData).getData('text/plain');
+      document.execCommand('insertText', false, text);
+    }
+    function clearFormattingIfEmpty(e) {
+      if (e.currentTarget.innerText.trim() === '') {
+        e.currentTarget.innerHTML = '';
+      }
+    }
+
+    document.getElementById('editor-secao').addEventListener('paste', handlePaste);
+    document.getElementById('editor-secao').addEventListener('input', clearFormattingIfEmpty);
+    document.getElementById('editor-clausula').addEventListener('paste', handlePaste);
+    document.getElementById('editor-clausula').addEventListener('input', clearFormattingIfEmpty);
+
+    // --- Extrai HTML inline de um contenteditable, removendo wrappers de bloco ---
+    function flattenHTML(el) {
+      let html = el.innerHTML;
+      html = html.replace(/<\/(div|p)>/gi, ' ');
+      html = html.replace(/<(div|p)[^>]*>/gi, '');
+      html = html.replace(/<br\s*\/?>/gi, ' ');
+      return html.trim().replace(/\s+/g, ' ');
+    }
+
+    // --- Lê/escreve o conteúdo editável de um bloco ---
+    function getEditableHTML(block) {
+      if (block.dataset.type === 'secao') {
+        return block.querySelector('p').innerHTML;
+      }
+      // cláusula: conteúdo após o span de índice
+      const p = block.querySelector('p');
+      const clone = p.cloneNode(true);
+      const strong = clone.querySelector('.bloco-indice');
+      if (strong) strong.remove();
+      return clone.innerHTML.trim().replace(/^\s/, '');
+    }
+
+    function setEditableHTML(block, html) {
+      if (block.dataset.type === 'secao') {
+        block.querySelector('p').innerHTML = html;
+        return;
+      }
+      const p = block.querySelector('p');
+      const strong = p.querySelector('.bloco-indice');
+      while (p.lastChild && p.lastChild !== strong) p.removeChild(p.lastChild);
+      const temp = document.createElement('span');
+      temp.innerHTML = html;
+      p.appendChild(document.createTextNode(' '));
+      while (temp.firstChild) p.appendChild(temp.firstChild);
+    }
+
+    // --- Habilita/desabilita drag em todos os blocos ---
+    function setAllDraggable(enabled) {
+      document.querySelectorAll('#contract-content .bloco').forEach(function(b) {
+        b.draggable = enabled;
+      });
+    }
+
+    // --- Modo de edição inline de um bloco ---
+    function enterEditMode(block) {
+      isEditing = true;
+      block.dataset.editing = 'true';
+      setAllDraggable(false);
+      block.style.outline = '1px solid black';
+      block.style.cursor = '';
+
+      const contentEl = block.querySelector('p');
+      contentEl.style.display = 'none';
+
+      const editUI = document.createElement('div');
+      editUI.className = 'edit-ui';
+
+      const toolbar = document.createElement('div');
+      ['bold','italic','underline'].forEach(function(cmd) {
+        const labels = { bold: '<b>B</b>', italic: '<i>I</i>', underline: '<u>U</u>' };
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.innerHTML = labels[cmd];
+        btn.addEventListener('mousedown', function(e) {
+          e.preventDefault();
+          document.execCommand(cmd);
+        });
+        toolbar.appendChild(btn);
+      });
+
+      const editor = document.createElement('div');
+      editor.contentEditable = 'true';
+      editor.style.cssText   = 'border: 1px solid black; min-height: 60px; padding: 4px; margin-top: 4px;';
+      editor.innerHTML       = getEditableHTML(block);
+      editor.addEventListener('paste', handlePaste);
+
+      const actions = document.createElement('div');
+      actions.style.cssText = 'text-align: right; margin-top: 4px;';
+
+      const btnCancel = document.createElement('button');
+      btnCancel.type        = 'button';
+      btnCancel.textContent = 'cancelar';
+      btnCancel.addEventListener('click', function(e) {
+        e.stopPropagation();
+        exitEditMode(block, null, editUI);
+      });
+
+      const btnSave = document.createElement('button');
+      btnSave.type        = 'button';
+      btnSave.textContent = 'salvar';
+      btnSave.addEventListener('click', function(e) {
+        e.stopPropagation();
+        exitEditMode(block, flattenHTML(editor), editUI);
+      });
+
+      actions.appendChild(btnCancel);
+      actions.appendChild(btnSave);
+      editUI.appendChild(toolbar);
+      editUI.appendChild(editor);
+      editUI.appendChild(actions);
+      block.appendChild(editUI);
+    }
+
+    function exitEditMode(block, newHTML, editUI) {
+      isEditing = false;
+      delete block.dataset.editing;
+      editUI.remove();
+      block.querySelector('p').style.display = '';
+      block.style.outline = '';
+
+      if (newHTML !== null) {
+        setEditableHTML(block, newHTML);
+        renumberBlocks();
+      }
+
+      setAllDraggable(true);
+    }
+
+    // --- Controles de indentação (apenas cláusulas) ---
+    const LEVELS = ['primeiro', 'segundo', 'terceiro'];
+
+    function refreshAllBlockControls() {
+      const allBlocos = Array.from(document.querySelectorAll('#contract-content .bloco'));
+      let firstClause  = true;
+      let prevType     = null;
+      allBlocos.forEach(function(block) {
+        if (block.dataset.type !== 'clausula') {
+          prevType = block.dataset.type;
+          return;
+        }
+        const isFirst      = firstClause;
+        const afterSection = prevType === 'secao';
+        firstClause        = false;
+        prevType           = 'clausula';
+        const levelIdx = LEVELS.indexOf(block.dataset.level);
+        block.querySelector('.btn-recuar').disabled  = isFirst || levelIdx === 0;
+        block.querySelector('.btn-avancar').disabled = isFirst || afterSection || levelIdx === LEVELS.length - 1;
+      });
+    }
+
+    function buildBtnEditar(div) {
+      const btn = document.createElement('button');
+      btn.type        = 'button';
+      btn.textContent = 'editar';
+      btn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        div.querySelector('.bloco-controles').style.display = 'none';
+        enterEditMode(div);
+      });
+      return btn;
+    }
+
+    function buildBtnRemover(div) {
+      const btn = document.createElement('button');
+      btn.type        = 'button';
+      btn.textContent = 'remover';
+      btn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        div.remove();
+        renumberBlocks();
+      });
+      return btn;
+    }
+
+    function buildControlesClausula(div) {
+      const controles = document.createElement('div');
+      controles.className     = 'bloco-controles';
+      controles.style.cssText = 'display: none; justify-content: space-between;';
+
+      const esquerda = document.createElement('span');
+      const btnOut = document.createElement('button');
+      btnOut.type        = 'button';
+      btnOut.className   = 'btn-recuar';
+      btnOut.textContent = '<- recuar';
+      btnOut.addEventListener('click', function(e) {
+        e.stopPropagation();
+        const i = LEVELS.indexOf(div.dataset.level);
+        if (i > 0) div.dataset.level = LEVELS[i - 1];
+        renumberBlocks();
+      });
+
+      const btnIn = document.createElement('button');
+      btnIn.type        = 'button';
+      btnIn.className   = 'btn-avancar';
+      btnIn.textContent = 'avancar ->';
+      btnIn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        const i = LEVELS.indexOf(div.dataset.level);
+        if (i < LEVELS.length - 1) div.dataset.level = LEVELS[i + 1];
+        renumberBlocks();
+      });
+
+      esquerda.appendChild(btnOut);
+      esquerda.appendChild(btnIn);
+
+      const direita = document.createElement('span');
+      direita.appendChild(buildBtnEditar(div));
+      direita.appendChild(document.createTextNode(' '));
+      direita.appendChild(buildBtnRemover(div));
+
+      controles.appendChild(esquerda);
+      controles.appendChild(direita);
+      return controles;
+    }
+
+    function buildControlesSecao(div) {
+      const controles = document.createElement('div');
+      controles.className     = 'bloco-controles';
+      controles.style.cssText = 'display: none; justify-content: flex-end;';
+
+      const direita = document.createElement('span');
+      direita.appendChild(buildBtnEditar(div));
+      direita.appendChild(document.createTextNode(' '));
+      direita.appendChild(buildBtnRemover(div));
+
+      controles.appendChild(direita);
+      return controles;
+    }
+
+    function attachDragEvents(div) {
+      div.addEventListener('mouseenter', function() {
+        if (this !== draggedEl && !isEditing) {
+          this.style.outline = '1px solid black';
+          this.style.cursor  = 'grab';
+          const ctrl = this.querySelector('.bloco-controles');
+          if (ctrl) ctrl.style.display = 'flex';
+        }
+      });
+      div.addEventListener('mouseleave', function() {
+        if (this !== draggedEl && !isEditing) {
+          this.style.outline = '';
+          this.style.cursor  = '';
+          const ctrl = this.querySelector('.bloco-controles');
+          if (ctrl) ctrl.style.display = 'none';
+        }
+      });
+      div.addEventListener('mousedown', function() {
+        if (!isEditing) document.body.style.cursor = 'grabbing';
+      });
+      div.addEventListener('mouseup', function() {
+        document.body.style.cursor = '';
+        if (!isEditing) this.style.cursor = 'grab';
+      });
+      div.addEventListener('dragstart', function(e) {
+        draggedEl = this;
+        this.style.cursor = 'grabbing';
+        const ctrl = this.querySelector('.bloco-controles');
+        if (ctrl) ctrl.style.display = 'none';
+        e.dataTransfer.effectAllowed = 'move';
+        const self = this;
+        self._dragTimer = setTimeout(() => {
+          if (draggedEl === self) {
+            self.style.outline   = '2px solid black';
+            self.style.boxShadow = '2px 2px 6px rgba(0,0,0,0.4)';
+          }
+        }, 0);
+      });
+      div.addEventListener('dragend', function() {
+        clearTimeout(this._dragTimer);
+        this.style.outline   = '';
+        this.style.boxShadow = '';
+        this.style.cursor    = '';
+        document.body.style.cursor = '';
+        draggedEl = null;
+        indicator.style.display = 'none';
+      });
+    }
+
+    // --- Criar bloco de seção ---
+    function createSecaoBlock(html) {
+      const div = document.createElement('div');
+      div.className    = 'bloco';
+      div.draggable    = true;
+      div.dataset.type = 'secao';
+
+      div.appendChild(buildControlesSecao(div));
+
+      const p = document.createElement('p');
+      p.innerHTML = html;
+      div.appendChild(p);
+
+      attachDragEvents(div);
+      return div;
+    }
+
+    // --- Criar bloco de cláusula ---
+    function createClausulaBlock(level, html) {
+      const div = document.createElement('div');
+      div.className     = 'bloco';
+      div.draggable     = true;
+      div.dataset.type  = 'clausula';
+      div.dataset.level = level;
+
+      div.appendChild(buildControlesClausula(div));
+
+      const p = document.createElement('p');
+      p.innerHTML = '<strong class="bloco-indice"></strong> ' + html;
+      div.appendChild(p);
+
+      attachDragEvents(div);
+      return div;
+    }
+
+    // --- Botão Adicionar ---
+    document.getElementById('btn-adicionar').addEventListener('click', function() {
+      const tipoEl = document.querySelector('input[name="tipo_bloco"]:checked');
+      if (!tipoEl) return;
+
+      let block;
+
+      if (tipoEl.value === 'secao') {
+        const html = flattenHTML(document.getElementById('editor-secao'));
+        if (!html) return;
+        block = createSecaoBlock(html);
+
+      } else {
+        const html = flattenHTML(document.getElementById('editor-clausula'));
+        if (!html) return;
+
+        // Herda o nível do último bloco de cláusula; default "primeiro"
+        const clausulas = document.querySelectorAll('#contract-content .bloco[data-type="clausula"]');
+        const lastLevel = clausulas.length > 0 ? clausulas[clausulas.length - 1].dataset.level : 'primeiro';
+        block = createClausulaBlock(lastLevel, html);
+      }
+
+      preview.appendChild(indicator); // garante que o indicador está no final
+      preview.insertBefore(block, indicator);
+      renumberBlocks();
+
+      document.getElementById('editor-secao').innerHTML = '';
+      document.getElementById('editor-clausula').innerHTML = '';
+    });
+
+    // ── Google Sheets API ─────────────────────────────────────────────────
+    // Após publicar o Apps Script, cole a URL abaixo:
+    var SHEETS_API_URL = 'https://script.google.com/macros/s/AKfycbwEUxfy1azaiU8cPTiFNWr4nIf7BnHRNSfIantio_qBK84YUIldws6u7TwsZlzBB6fiSg/exec';
+
+    async function apiGet(params) {
+      var qs = Object.keys(params).map(function(k) {
+        return encodeURIComponent(k) + '=' + encodeURIComponent(params[k]);
+      }).join('&');
+      var res = await fetch(SHEETS_API_URL + '?' + qs, { redirect: 'follow' });
+      return res.json();
+    }
+
+    async function apiPost(body) {
+      var res = await fetch(SHEETS_API_URL, {
+        method:   'POST',
+        headers:  { 'Content-Type': 'text/plain' },
+        body:     JSON.stringify(body),
+        redirect: 'follow'
+      });
+      return res.json();
+    }
+
+    // ── Salvar / carregar templates (Google Sheets) ───────────────────────
+
+    var currentTemplateKey  = null;
+    var currentTemplateName = null;
+    var templateDirty       = false;
+    var loadingTemplate     = false;
+
+    function setCurrentTemplate(key, name) {
+      currentTemplateKey  = key;
+      currentTemplateName = name || key;
+      var btn = document.getElementById('btn-salvar-padrao');
+      btn.textContent = key ? 'Salvar alterações' : 'Salvar como padrão';
+    }
+
+    function updateExportButton() {
+      var hasContent = document.querySelector('#contract-content .bloco') !== null;
+      document.getElementById('btn-exportar-pdf').disabled  = !hasContent;
+      document.getElementById('btn-exportar-html').disabled = !hasContent;
+      var btn = document.getElementById('btn-salvar-padrao');
+      if (currentTemplateKey) {
+        btn.disabled = !templateDirty;
+      } else {
+        btn.disabled = !hasContent;
+      }
+    }
+
+    function markDirty() {
+      if (loadingTemplate) return;
+      templateDirty = true;
+      updateExportButton();
+    }
+
+    function markClean() {
+      templateDirty = false;
+      updateExportButton();
+    }
+
+    // Converte formato Sheets → interno
+    function sheetsToInternal(b) {
+      return { type: b.tipo, level: b.nivel || 'primeiro', html: b.conteudo };
+    }
+
+    // Converte formato interno → Sheets
+    function internalToSheets(b) {
+      return { tipo: b.type, nivel: b.level || 'primeiro', conteudo: b.html };
+    }
+
+    function getBlockContent(block) {
+      var p = block.querySelector('p').cloneNode(true);
+      var idx = p.querySelector('.bloco-indice');
+      if (idx) {
+        var next = idx.nextSibling;
+        idx.remove();
+        if (next && next.nodeType === 3) {
+          next.textContent = next.textContent.replace(/^\s/, '');
+        }
+      }
+      return p.innerHTML;
+    }
+
+    function extractBlocksData() {
+      var result = [];
+      document.querySelectorAll('#contract-content .bloco').forEach(function(block) {
+        result.push({
+          type:  block.dataset.type,
+          level: block.dataset.level || 'primeiro',
+          html:  getBlockContent(block)
+        });
+      });
+      return result;
+    }
+
+    function loadBlocksData(blocksData) {
+      loadingTemplate = true;
+      var content = document.getElementById('contract-content');
+      content.querySelectorAll('.bloco').forEach(function(b) { b.remove(); });
+      blocksData.forEach(function(data) {
+        var block = data.type === 'secao'
+          ? createSecaoBlock(data.html)
+          : createClausulaBlock(data.level, data.html);
+        content.insertBefore(block, indicator);
+      });
+      renumberBlocks();
+      loadingTemplate = false;
+      markClean();
+    }
+
+    function clearEditorFields() {
+      document.querySelectorAll('input[name="tipo_bloco"]').forEach(function(r) { r.checked = false; });
+      document.getElementById('campo-secao').style.display    = 'none';
+      document.getElementById('campo-clausula').style.display = 'none';
+      document.getElementById('editor-secao').innerHTML    = '';
+      document.getElementById('editor-clausula').innerHTML = '';
+    }
+
+    function addCustomTemplateRadio(name, sheetName) {
+      var list = document.getElementById('custom-templates-list');
+      if (list.querySelector('[data-key="' + sheetName + '"]')) return;
+
+      var br    = document.createElement('br');
+      var label = document.createElement('label');
+      label.setAttribute('data-key', sheetName);
+
+      var radio = document.createElement('input');
+      radio.type  = 'radio';
+      radio.name  = 'tipo_template';
+      radio.value = sheetName;
+      radio.addEventListener('change', async function() {
+        document.getElementById('campos-template').style.display = 'block';
+        radio.disabled = true;
+        try {
+          var data = await apiGet({ action: 'load', sheet: sheetName });
+          if (!data.ok) { alert('Erro ao carregar template: ' + (data.error || '')); return; }
+          setCurrentTemplate(sheetName, name);
+          loadBlocksData(data.blocks.map(sheetsToInternal));
+          document.querySelectorAll('input[name="status_template"]').forEach(function(r) {
+            r.checked = r.value === data.status;
+          });
+          document.querySelectorAll('input[name="versao_template"]').forEach(function(r) {
+            r.checked = r.value === data.versao;
+          });
+          clearEditorFields();
+        } catch(e) {
+          alert('Erro de conexão ao carregar template.');
+        } finally {
+          radio.disabled = false;
+        }
+      });
+
+      var del = document.createElement('button');
+      del.type = 'button';
+      del.textContent = ' × ';
+      del.style.cssText = 'margin-left:4px;font-size:11px;cursor:pointer;';
+      del.addEventListener('click', async function(e) {
+        e.stopPropagation();
+        if (!confirm('Remover "' + name + '"?')) return;
+        del.disabled = true;
+        try {
+          await apiPost({ action: 'delete', sheetName: sheetName });
+          br.remove();
+          label.remove();
+          if (currentTemplateKey === sheetName) setCurrentTemplate(null);
+        } catch(err) {
+          alert('Erro ao remover template.');
+          del.disabled = false;
+        }
+      });
+
+      label.appendChild(radio);
+      label.appendChild(document.createTextNode(' ' + name));
+      label.appendChild(del);
+      list.appendChild(br);
+      list.appendChild(label);
+    }
+
+    // Carrega templates do Sheets ao abrir a página
+    (async function() {
+      if (!SHEETS_API_URL || SHEETS_API_URL === 'COLE_AQUI_A_URL_DO_WEBAPP') return;
+      try {
+        var data = await apiGet({ action: 'list' });
+        if (data.ok) {
+          data.templates.forEach(function(tpl) {
+            addCustomTemplateRadio(tpl.name, tpl.sheetName);
+          });
+        }
+      } catch(e) {
+        console.warn('Não foi possível carregar templates do Sheets:', e);
+      }
+    })();
+
+    document.getElementById('btn-salvar-padrao').addEventListener('click', async function() {
+      var btn      = this;
+      var statusEl = document.querySelector('input[name="status_template"]:checked');
+      var versaoEl = document.querySelector('input[name="versao_template"]:checked');
+
+      if (currentTemplateKey) {
+        btn.disabled    = true;
+        btn.textContent = 'Salvando...';
+        try {
+          var result = await apiPost({
+            action:    'save',
+            sheetName: currentTemplateKey,
+            name:      currentTemplateName,
+            status:    statusEl ? statusEl.value : '',
+            versao:    versaoEl ? versaoEl.value : '',
+            blocks:    extractBlocksData().map(internalToSheets)
+          });
+          if (result.ok) { markClean(); clearEditorFields(); }
+          else alert('Erro ao salvar alterações.');
+        } catch(e) {
+          alert('Erro ao salvar alterações: ' + e.message);
+        } finally {
+          btn.textContent = 'Salvar alterações';
+          updateExportButton();
+        }
+      } else {
+        document.getElementById('input-nome-template').value = '';
+        document.getElementById('modal-salvar').style.display = 'block';
+        document.getElementById('input-nome-template').focus();
+      }
+    });
+
+    document.getElementById('btn-modal-cancelar').addEventListener('click', function() {
+      document.getElementById('modal-salvar').style.display = 'none';
+    });
+
+    document.getElementById('btn-modal-confirmar').addEventListener('click', async function() {
+      var name = document.getElementById('input-nome-template').value.trim();
+      if (!name) return;
+
+      var btn      = this;
+      btn.disabled    = true;
+      btn.textContent = 'Salvando...';
+
+      var statusEl = document.querySelector('input[name="status_template"]:checked');
+      var versaoEl = document.querySelector('input[name="versao_template"]:checked');
+
+      try {
+        var data = await apiPost({
+          action: 'save',
+          name:   name,
+          status: statusEl ? statusEl.value : '',
+          versao: versaoEl ? versaoEl.value : '',
+          blocks: extractBlocksData().map(internalToSheets)
+        });
+
+        if (!data.ok) { alert('Erro ao salvar template.'); return; }
+
+        document.getElementById('modal-salvar').style.display = 'none';
+        addCustomTemplateRadio(name, data.sheetName);
+
+        var newRadio = document.querySelector('input[name="tipo_template"][value="' + data.sheetName + '"]');
+        if (newRadio) newRadio.checked = true;
+        setCurrentTemplate(data.sheetName, name);
+        markClean();
+
+        document.getElementById('campos-template').style.display = 'block';
+        clearEditorFields();
+      } catch(e) {
+        alert('Erro ao salvar template: ' + e.message);
+      } finally {
+        btn.disabled    = false;
+        btn.textContent = 'Salvar';
+      }
+    });
+  </script>
+
+</body>
+</html>
