@@ -1452,15 +1452,20 @@
       return Array.from(new Set(matches)).join(', ');
     }
 
+    // Mapeamento símbolo ↔ label textual (evita que Sheets interprete como fórmula)
+    var OPERADOR_PARA_LABEL = { '==': 'igual a', '!=': 'diferente de', '>': 'maior que', '<': 'menor que', 'contains': 'contém' };
+    var LABEL_PARA_OPERADOR = { 'igual a': '==', 'diferente de': '!=', 'maior que': '>', 'menor que': '<', 'contém': 'contains' };
+
     // Converte formato Sheets → interno
     function sheetsToInternal(b) {
       var condicional = '';
       if (b.cond_variavel && b.cond_valor) {
-        condicional = b.cond_variavel + ' ' + (b.cond_operador || '==') + ' ' + b.cond_valor;
+        var op = LABEL_PARA_OPERADOR[b.cond_operador] || b.cond_operador || '==';
+        condicional = b.cond_variavel + ' ' + op + ' ' + b.cond_valor;
       }
       return {
         type:        b.tipo_conteudo,
-        level:       'primeiro',     // nível é derivado pela ordem dos blocos
+        level:       'primeiro',
         html:        b.conteudo,
         condicional: condicional
       };
@@ -1469,10 +1474,14 @@
     // Converte formato interno → Sheets
     function internalToSheets(b) {
       var cond = (b.condicional || '').trim();
-      var condVars = { variavel: '', operador: '==', valor: '' };
+      var condVars = { variavel: '', operador: '', valor: '' };
       if (cond) {
         var m = cond.match(/^(\S+)\s+(==|!=|>|<|contains)\s+(.+)$/);
-        if (m) { condVars.variavel = m[1]; condVars.operador = m[2]; condVars.valor = m[3].trim(); }
+        if (m) {
+          condVars.variavel = m[1];
+          condVars.operador = OPERADOR_PARA_LABEL[m[2]] || m[2]; // salva label textual
+          condVars.valor    = m[3].trim();
+        }
       }
       return {
         tipo_conteudo: b.type,
