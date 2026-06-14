@@ -112,68 +112,110 @@
 
     <!-- Formulário -->
     <section style="flex: 1; padding: 16px; overflow-y: auto;">
-      <h2>Campos do Template</h2>
 
       <form>
 
-        <!-- 1. Tipo de Template -->
+        <!-- ── Seção 1: Templates ── -->
+        <h3 style="margin: 0 0 8px;">Templates</h3>
         <fieldset>
-          <legend>Tipo de Template</legend>
           <label><input type="radio" name="tipo_template" value="novo"> Novo template</label>
           <div id="custom-templates-list"></div>
         </fieldset>
 
-        <div style="margin-bottom: 16px;"></div>
-
         <div id="campos-template" style="display: none;">
 
-          <!-- 2. Status do Template -->
+          <!-- ── Seção 2: Dados do Template ── -->
+          <h3 style="margin: 20px 0 8px;">Dados do Template</h3>
           <fieldset>
-            <legend>Status do Template</legend>
+            <legend>Nome</legend>
+            <input type="text" id="input-nome-template" placeholder="Nome do template" style="width:100%; padding:4px; box-sizing:border-box;">
+            <div id="erro-nome-template" style="display:none; color:#c00; font-size:12px; margin-top:4px;"></div>
+          </fieldset>
+
+          <br>
+
+          <fieldset>
+            <legend>Tipo</legend>
+            <label><input type="radio" name="tipo_contrato" value="contrato"> Contrato</label><br>
+            <label><input type="radio" name="tipo_contrato" value="anexo"> Anexo</label><br>
+            <label><input type="radio" name="tipo_contrato" value="aditivo"> Aditivo</label>
+          </fieldset>
+
+          <br>
+
+          <fieldset>
+            <legend>Status</legend>
             <label><input type="radio" name="status_template" value="inativo"> Inativo</label><br>
             <label><input type="radio" name="status_template" value="ativo"> Ativo</label>
           </fieldset>
 
           <br>
 
-          <!-- 3. Versão do Template -->
           <fieldset>
-            <legend>Versão do Template</legend>
+            <legend>Versão</legend>
             <label><input type="radio" name="versao_template" value="major"> Major (ex: v16)</label><br>
-            <label><input type="radio" name="versao_template" value="minor"> Minor (ex: v15.9)</label>
+            <label><input type="radio" name="versao_template" value="minor"> Minor (ex: v15.9)</label><br>
+            <label style="display:inline-block; margin-top:6px;">Número: <input type="text" id="input-versao-numero" placeholder="ex: v16" style="margin-left:4px; padding:2px 4px; width:80px;"></label>
           </fieldset>
 
-          <br>
-
-          <!-- 4. Tipo do Bloco -->
+          <!-- ── Seção 3: Conteúdo ── -->
+          <h3 style="margin: 20px 0 8px;">Conteúdo</h3>
           <fieldset>
-            <legend>Tipo do Bloco</legend>
+            <legend>Tipo do Conteúdo</legend>
             <label><input type="radio" name="tipo_bloco" value="secao"> Seção</label>
             <label><input type="radio" name="tipo_bloco" value="clausula"> Cláusula</label>
           </fieldset>
 
           <br>
 
-          <!-- 5a. Campo Seção -->
+          <!-- Campo Seção -->
           <div id="campo-secao" style="display: none;">
             <label>Título da Seção</label><br>
             <div id="toolbar-secao">
               <button type="button" onclick="document.execCommand('bold')"><b>B</b></button>
               <button type="button" onclick="document.execCommand('italic')"><i>I</i></button>
               <button type="button" onclick="document.execCommand('underline')"><u>U</u></button>
+              <button type="button" onclick="document.execCommand('strikeThrough')" style="text-decoration:line-through;">S</button>
+              <button type="button" onclick="insertLink('editor-secao')">🔗</button>
             </div>
-            <div id="editor-secao" contenteditable="true" style="border: 1px solid black; min-height: 60px; padding: 4px;"></div>
+            <div id="editor-secao" contenteditable="true" style="border: 1px solid black; min-height: 60px; padding: 4px;" oninput="syncAdicionarSecao()"></div>
+            <div class="campo-condicional" style="margin-top: 8px;">
+              <label style="font-size: 12px; color: #666;">Exibir somente se</label><br>
+              <div style="display: flex; gap: 6px; align-items: center; margin-top: 4px;">
+                <select id="cond-secao-variavel" style="flex: 1;">
+                  <option value="">(sempre exibir)</option>
+                  <option value="contract_id">contract_id</option>
+                  <option value="modalidade_garantia">modalidade_garantia</option>
+                </select>
+                <select id="cond-secao-operador" style="flex: 1;">
+                  <option value="==">igual a</option>
+                  <option value="!=">diferente de</option>
+                  <option value=">">maior que</option>
+                  <option value="<">menor que</option>
+                  <option value="contains">contém</option>
+                </select>
+                <select id="cond-secao-valor" style="flex: 1;">
+                  <option value="">selecionar valor...</option>
+                  <option value="fianca_garantida">fianca_garantida</option>
+                </select>
+              </div>
+            </div>
+            <br>
+            <div id="erro-cond-secao" style="display:none; color:#c00; font-size:12px; margin-bottom:4px;"></div>
+            <button type="button" id="btn-adicionar-secao" disabled style="opacity:0.4;">Adicionar</button>
           </div>
 
-          <!-- 5b. Campo Cláusula -->
+          <!-- Campo Cláusula -->
           <div id="campo-clausula" style="display: none;">
             <label>Conteúdo da Cláusula</label><br>
             <div id="toolbar-clausula">
               <button type="button" onclick="document.execCommand('bold')"><b>B</b></button>
               <button type="button" onclick="document.execCommand('italic')"><i>I</i></button>
               <button type="button" onclick="document.execCommand('underline')"><u>U</u></button>
+              <button type="button" onclick="document.execCommand('strikeThrough')" style="text-decoration:line-through;">S</button>
+              <button type="button" onclick="insertLink('editor-clausula')">🔗</button>
             </div>
-            <div id="editor-clausula" contenteditable="true" style="border: 1px solid black; min-height: 120px; padding: 4px;"></div>
+            <div id="editor-clausula" contenteditable="true" style="border: 1px solid black; min-height: 120px; padding: 4px;" oninput="syncAdicionarClausula()"></div>
             <div style="margin-top: 6px; display: flex; gap: 6px; align-items: center;">
               <select id="select-variavel">
                 <option value="">Selecionar variável...</option>
@@ -182,17 +224,31 @@
               </select>
               <button type="button" id="btn-inserir-variavel">Inserir variável</button>
             </div>
-            <div id="lista-variaveis" style="display: none;">
-              <br>
-              <label>Variáveis encontradas no conteúdo:</label>
-              <ul id="lista-variaveis-items"></ul>
+            <div class="campo-condicional" style="margin-top: 8px;">
+              <label style="font-size: 12px; color: #666;">Exibir somente se</label><br>
+              <div style="display: flex; gap: 6px; align-items: center; margin-top: 4px;">
+                <select id="cond-clausula-variavel" style="flex: 1;">
+                  <option value="">(sempre exibir)</option>
+                  <option value="contract_id">contract_id</option>
+                  <option value="modalidade_garantia">modalidade_garantia</option>
+                </select>
+                <select id="cond-clausula-operador" style="flex: 1;">
+                  <option value="==">igual a</option>
+                  <option value="!=">diferente de</option>
+                  <option value=">">maior que</option>
+                  <option value="<">menor que</option>
+                  <option value="contains">contém</option>
+                </select>
+                <select id="cond-clausula-valor" style="flex: 1;">
+                  <option value="">selecionar valor...</option>
+                  <option value="fianca_garantida">fianca_garantida</option>
+                </select>
+              </div>
             </div>
+            <br>
+            <div id="erro-cond-clausula" style="display:none; color:#c00; font-size:12px; margin-bottom:4px;"></div>
+            <button type="button" id="btn-adicionar-clausula" disabled style="opacity:0.4;">Adicionar</button>
           </div>
-
-          <br>
-
-          <!-- Botão Adicionar -->
-          <button type="button" id="btn-adicionar">Adicionar</button>
 
         </div>
 
@@ -207,14 +263,18 @@
       <div id="preview-wrapper" style="position: absolute; top: 53px; bottom: 53px; left: 0; right: 0; overflow-y: auto;">
         <div id="contract-content"></div>
       </div>
-      <div id="modal-salvar" style="display:none; position:absolute; bottom:53px; left:0; right:0; background:#fff; border-top:1px solid #ddd; padding:12px 16px;">
-        <label style="font-size:12px;">Nome do template:</label><br>
-        <input id="input-nome-template" type="text" style="width:100%; margin-top:4px; padding:4px; box-sizing:border-box;">
-        <div style="margin-top:8px; text-align:right;">
-          <button id="btn-modal-cancelar" type="button">Cancelar</button>
-          <button id="btn-modal-confirmar" type="button">Salvar</button>
+      <div id="modal-link" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.35); z-index:1000; align-items:center; justify-content:center;">
+        <div style="background:#fff; border-radius:6px; padding:20px; width:320px; box-shadow:0 4px 16px rgba(0,0,0,0.2);">
+          <label style="font-size:13px; font-weight:bold;">URL do link</label><br>
+          <input id="input-link-url" type="text" placeholder="https://..." style="width:100%; margin-top:6px; padding:5px 7px; box-sizing:border-box; font-size:13px;">
+          <div id="erro-link-url" style="display:none; color:#c00; font-size:12px; margin-top:5px;"></div>
+          <div style="margin-top:12px; text-align:right; display:flex; gap:8px; justify-content:flex-end;">
+            <button id="btn-link-cancelar" type="button">Cancelar</button>
+            <button id="btn-link-confirmar" type="button">Inserir</button>
+          </div>
         </div>
       </div>
+
       <div style="position: absolute; bottom: 0; left: 0; right: 0; padding: 12px 16px; border-top: 1px solid #ddd; background: #fff; display: flex; justify-content: space-between; align-items: center;">
         <button id="btn-salvar-padrao" type="button">Salvar como padrão</button>
         <div>
@@ -239,6 +299,8 @@
         // Limpa seleção dos outros campos
         document.querySelectorAll('input[name="status_template"]').forEach(function(r) { r.checked = false; });
         document.querySelectorAll('input[name="versao_template"]').forEach(function(r) { r.checked = false; });
+        document.getElementById('input-versao-numero').value = '';
+        document.querySelectorAll('input[name="tipo_contrato"]').forEach(function(r) { r.checked = false; });
         document.querySelectorAll('input[name="tipo_bloco"]').forEach(function(r) { r.checked = false; });
         document.getElementById('campo-secao').style.display    = 'none';
         document.getElementById('campo-clausula').style.display = 'none';
@@ -252,10 +314,11 @@
       radio.addEventListener('change', function() { onTipoTemplateChange(this); });
     });
 
-    // --- Marca dirty ao mudar status ou versão ---
-    document.querySelectorAll('input[name="status_template"], input[name="versao_template"]').forEach(function(radio) {
+    // --- Marca dirty ao mudar status, versão ou tipo ---
+    document.querySelectorAll('input[name="status_template"], input[name="versao_template"], input[name="tipo_contrato"]').forEach(function(radio) {
       radio.addEventListener('change', markDirty);
     });
+    document.getElementById('input-versao-numero').addEventListener('input', markDirty);
 
     // --- Exibe campo de acordo com tipo do bloco ---
     document.querySelectorAll('input[name="tipo_bloco"]').forEach(function(radio) {
@@ -635,13 +698,20 @@
     function renumberBlocks() {
       const allBlocos = Array.from(document.querySelectorAll('#contract-content .bloco'));
 
-      // A primeira cláusula da lista (ou após cada seção) deve sempre ser de primeiro nível
       let forcePrimeiro = true;
-
+      let secaoNum = 0;
+      let currentSecao = '';
       const c = { l1: 0, l2: 0, l3: 0 };
+
       allBlocos.forEach(function(block) {
         if (block.dataset.type === 'secao') {
+          secaoNum++;
+          currentSecao = String(secaoNum);
+          block.dataset.num = String(secaoNum);
           forcePrimeiro = true;
+          // Remove span de índice se existir (legado)
+          var idx = block.querySelector('.secao-indice');
+          if (idx) idx.remove();
           return;
         }
 
@@ -649,6 +719,8 @@
           block.dataset.level = 'primeiro';
           forcePrimeiro = false;
         }
+
+        block.dataset.secao = currentSecao;
 
         const level = block.dataset.level;
         if (level === 'primeiro') { c.l1++; c.l2 = 0; c.l3 = 0; }
@@ -718,19 +790,6 @@
       renumberBlocks();
     });
 
-    // --- Detecção de variáveis no editor de cláusula ---
-    document.getElementById('editor-clausula').addEventListener('input', function() {
-      const text  = this.innerText;
-      const found = [...new Set(text.match(/\{\{[^}]+\}\}/g) || [])];
-      const lista = document.getElementById('lista-variaveis');
-      const items = document.getElementById('lista-variaveis-items');
-      if (found.length === 0) {
-        lista.style.display = 'none';
-      } else {
-        items.innerHTML = found.map(function(v) { return '<li>' + v + '</li>'; }).join('');
-        lista.style.display = 'block';
-      }
-    });
 
     // --- Colar sem formatação em qualquer contenteditable ---
     function handlePaste(e) {
@@ -748,6 +807,89 @@
     document.getElementById('editor-secao').addEventListener('input', clearFormattingIfEmpty);
     document.getElementById('editor-clausula').addEventListener('paste', handlePaste);
     document.getElementById('editor-clausula').addEventListener('input', clearFormattingIfEmpty);
+
+    // --- Validação: botão Adicionar ---
+    // Habilita/desabilita botão baseado somente no conteúdo do editor
+    function syncAdicionar(prefix) {
+      var temConteudo   = document.getElementById('editor-' + prefix).innerText.trim() !== '';
+      var btn           = document.getElementById('btn-adicionar-' + prefix);
+      btn.disabled      = !temConteudo;
+      btn.style.opacity = temConteudo ? '1' : '0.4';
+      // Limpa erro condicional ao reeditar o conteúdo
+      if (temConteudo) document.getElementById('erro-cond-' + prefix).style.display = 'none';
+    }
+
+    function syncAdicionarSecao()    { syncAdicionar('secao'); }
+    function syncAdicionarClausula() { syncAdicionar('clausula'); }
+
+    // Limpa erro condicional ao corrigir os selects
+    ['secao', 'clausula'].forEach(function(p) {
+      ['variavel', 'operador', 'valor'].forEach(function(campo) {
+        document.getElementById('cond-' + p + '-' + campo).addEventListener('change', function() {
+          document.getElementById('erro-cond-' + p).style.display = 'none';
+        });
+      });
+    });
+
+    // --- Inserir link ---
+    var savedLinkRange  = null;
+    var savedLinkEditor = null;
+
+    function insertLink(editorId) {
+      var editor = document.getElementById(editorId);
+      // Salva seleção antes de abrir modal
+      var sel = window.getSelection();
+      savedLinkRange  = (sel && sel.rangeCount > 0) ? sel.getRangeAt(0).cloneRange() : null;
+      savedLinkEditor = editor;
+
+      var modal    = document.getElementById('modal-link');
+      var input    = document.getElementById('input-link-url');
+      input.value  = '';
+      modal.style.display = 'flex';
+      input.focus();
+    }
+
+    document.getElementById('btn-link-confirmar').addEventListener('click', function() {
+      var url      = document.getElementById('input-link-url').value.trim();
+      var erroLink = document.getElementById('erro-link-url');
+      if (!url) { erroLink.style.display = 'block'; erroLink.textContent = 'Informe uma URL.'; return; }
+      if (!/^https?:\/\//i.test(url) && !/^www\./i.test(url)) {
+        erroLink.style.display = 'block';
+        erroLink.textContent   = 'URL inválida. Deve começar com http://, https:// ou www.';
+        return;
+      }
+      erroLink.style.display = 'none';
+      document.getElementById('modal-link').style.display = 'none';
+      if (!savedLinkEditor) return;
+      if (/^www\./i.test(url)) url = 'https://' + url;
+      savedLinkEditor.focus();
+      if (savedLinkRange) {
+        var sel = window.getSelection();
+        sel.removeAllRanges();
+        sel.addRange(savedLinkRange);
+      }
+      document.execCommand('createLink', false, url);
+      // Faz o link abrir em nova aba
+      savedLinkEditor.querySelectorAll('a').forEach(function(a) {
+        a.target = '_blank';
+        a.rel    = 'noopener noreferrer';
+      });
+      savedLinkRange = null; savedLinkEditor = null;
+    });
+
+    document.getElementById('btn-link-cancelar').addEventListener('click', function() {
+      document.getElementById('modal-link').style.display = 'none';
+      document.getElementById('erro-link-url').style.display = 'none';
+      savedLinkRange = null; savedLinkEditor = null;
+    });
+
+    document.getElementById('input-link-url').addEventListener('input', function() {
+      document.getElementById('erro-link-url').style.display = 'none';
+    });
+    document.getElementById('input-link-url').addEventListener('keydown', function(e) {
+      if (e.key === 'Enter')  document.getElementById('btn-link-confirmar').click();
+      if (e.key === 'Escape') document.getElementById('btn-link-cancelar').click();
+    });
 
     // --- Inserir variável no cursor do editor de cláusula ---
     var savedClausulaRange = null;
@@ -795,20 +937,22 @@
 
     // --- Lê/escreve o conteúdo editável de um bloco ---
     function getEditableHTML(block) {
-      if (block.dataset.type === 'secao') {
-        return block.querySelector('p').innerHTML;
-      }
-      // cláusula: conteúdo após o span de índice
       const p = block.querySelector('p');
       const clone = p.cloneNode(true);
-      const strong = clone.querySelector('.bloco-indice');
-      if (strong) strong.remove();
+      // Remove índice de seção ou cláusula
+      const secaoIdx = clone.querySelector('.secao-indice');
+      if (secaoIdx) secaoIdx.remove();
+      const clausulaIdx = clone.querySelector('.bloco-indice');
+      if (clausulaIdx) clausulaIdx.remove();
       return clone.innerHTML.trim().replace(/^\s/, '');
     }
 
     function setEditableHTML(block, html) {
       if (block.dataset.type === 'secao') {
-        block.querySelector('p').innerHTML = html;
+        const p = block.querySelector('p');
+        const idx = p.querySelector('.secao-indice');
+        p.innerHTML = html;
+        if (idx) p.insertBefore(idx, p.firstChild);
         return;
       }
       const p = block.querySelector('p');
@@ -842,8 +986,8 @@
       editUI.className = 'edit-ui';
 
       const toolbar = document.createElement('div');
-      ['bold','italic','underline'].forEach(function(cmd) {
-        const labels = { bold: '<b>B</b>', italic: '<i>I</i>', underline: '<u>U</u>' };
+      ['bold','italic','underline','strikeThrough'].forEach(function(cmd) {
+        const labels = { bold: '<b>B</b>', italic: '<i>I</i>', underline: '<u>U</u>', strikeThrough: '<span style="text-decoration:line-through">S</span>' };
         const btn = document.createElement('button');
         btn.type = 'button';
         btn.innerHTML = labels[cmd];
@@ -854,21 +998,85 @@
         toolbar.appendChild(btn);
       });
 
+      // Botão de link no toolbar do preview
+      (function() {
+        const btnLink = document.createElement('button');
+        btnLink.type      = 'button';
+        btnLink.innerHTML = '🔗';
+        btnLink.addEventListener('mousedown', function(e) {
+          e.preventDefault();
+          // Salva seleção e referencia o editor inline
+          var sel = window.getSelection();
+          savedLinkRange  = (sel && sel.rangeCount > 0) ? sel.getRangeAt(0).cloneRange() : null;
+          savedLinkEditor = editor;
+          var input = document.getElementById('input-link-url');
+          input.value = '';
+          document.getElementById('modal-link').style.display = 'flex';
+          input.focus();
+        });
+        toolbar.appendChild(btnLink);
+      })();
+
       const editor = document.createElement('div');
       editor.contentEditable = 'true';
       editor.style.cssText   = 'border: 1px solid black; min-height: 60px; padding: 4px; margin-top: 4px;';
       editor.innerHTML       = getEditableHTML(block);
       editor.addEventListener('paste', handlePaste);
 
+      // --- Painel condicional inline ---
+      var condAtual = (block.dataset.condicional || '').trim();
+      // Parse "variavel operador valor" — operador pode ser ==, !=, >, <, contains
+      var condVars = { variavel: '', operador: '==', valor: '' };
+      if (condAtual) {
+        var m = condAtual.match(/^(\S+)\s+(==|!=|>|<|contains)\s+(.+)$/);
+        if (m) { condVars.variavel = m[1]; condVars.operador = m[2]; condVars.valor = m[3].trim(); }
+      }
+
+      var condPanel = document.createElement('div');
+      condPanel.style.cssText = 'margin-top: 8px; padding-top: 6px; border-top: 1px solid #ddd;';
+      condPanel.innerHTML =
+        '<label style="font-size:12px;color:#666;">Exibir somente se</label>' +
+        '<div style="display:flex;gap:6px;align-items:center;margin-top:4px;">' +
+          '<select class="cond-edit-variavel" style="flex:1;">' +
+            '<option value="">(sempre exibir)</option>' +
+            '<option value="contract_id">contract_id</option>' +
+            '<option value="modalidade_garantia">modalidade_garantia</option>' +
+          '</select>' +
+          '<select class="cond-edit-operador" style="flex:1;">' +
+            '<option value="==">igual a</option>' +
+            '<option value="!=">diferente de</option>' +
+            '<option value=">">maior que</option>' +
+            '<option value="<">menor que</option>' +
+            '<option value="contains">contém</option>' +
+          '</select>' +
+          '<select class="cond-edit-valor" style="flex:1;">' +
+            '<option value="">selecionar valor...</option>' +
+            '<option value="fianca_garantida">fianca_garantida</option>' +
+          '</select>' +
+        '</div>' +
+        '<div class="cond-edit-erro" style="display:none;color:#c00;font-size:12px;margin-top:4px;"></div>';
+
+      // Popula com valores existentes
+      condPanel.querySelector('.cond-edit-variavel').value = condVars.variavel;
+      condPanel.querySelector('.cond-edit-operador').value = condVars.operador;
+      condPanel.querySelector('.cond-edit-valor').value    = condVars.valor;
+
+      // Limpa erro ao mudar selects
+      condPanel.querySelectorAll('select').forEach(function(sel) {
+        sel.addEventListener('change', function() {
+          condPanel.querySelector('.cond-edit-erro').style.display = 'none';
+        });
+      });
+
       const actions = document.createElement('div');
-      actions.style.cssText = 'text-align: right; margin-top: 4px;';
+      actions.style.cssText = 'text-align: right; margin-top: 8px;';
 
       const btnCancel = document.createElement('button');
       btnCancel.type        = 'button';
       btnCancel.textContent = 'cancelar';
       btnCancel.addEventListener('click', function(e) {
         e.stopPropagation();
-        exitEditMode(block, null, editUI);
+        exitEditMode(block, null, null, editUI);
       });
 
       const btnSave = document.createElement('button');
@@ -876,18 +1084,30 @@
       btnSave.textContent = 'salvar';
       btnSave.addEventListener('click', function(e) {
         e.stopPropagation();
-        exitEditMode(block, flattenHTML(editor), editUI);
+        // Valida condicional
+        var v = condPanel.querySelector('.cond-edit-variavel').value;
+        var o = condPanel.querySelector('.cond-edit-operador').value;
+        var val = condPanel.querySelector('.cond-edit-valor').value;
+        var erroEl = condPanel.querySelector('.cond-edit-erro');
+        if (v && !val) {
+          erroEl.textContent   = 'Selecione um valor para a condição, ou redefina para "(sempre exibir)".';
+          erroEl.style.display = 'block';
+          return;
+        }
+        var novaCondicional = (v && val) ? (v + ' ' + o + ' ' + val) : '';
+        exitEditMode(block, flattenHTML(editor), novaCondicional, editUI);
       });
 
       actions.appendChild(btnCancel);
       actions.appendChild(btnSave);
       editUI.appendChild(toolbar);
       editUI.appendChild(editor);
+      editUI.appendChild(condPanel);
       editUI.appendChild(actions);
       block.appendChild(editUI);
     }
 
-    function exitEditMode(block, newHTML, editUI) {
+    function exitEditMode(block, newHTML, novaCondicional, editUI) {
       isEditing = false;
       delete block.dataset.editing;
       editUI.remove();
@@ -895,6 +1115,14 @@
       block.style.outline = '';
 
       if (newHTML !== null) {
+        // novaCondicional pode ser string vazia (sem condição) ou expressão
+        if (novaCondicional !== null) {
+          if (novaCondicional) {
+            block.dataset.condicional = novaCondicional;
+          } else {
+            delete block.dataset.condicional;
+          }
+        }
         setEditableHTML(block, newHTML);
         renumberBlocks();
       }
@@ -1053,11 +1281,12 @@
     }
 
     // --- Criar bloco de seção ---
-    function createSecaoBlock(html) {
+    function createSecaoBlock(html, condicional) {
       const div = document.createElement('div');
       div.className    = 'bloco';
       div.draggable    = true;
       div.dataset.type = 'secao';
+      if (condicional) div.dataset.condicional = condicional;
 
       div.appendChild(buildControlesSecao(div));
 
@@ -1070,12 +1299,13 @@
     }
 
     // --- Criar bloco de cláusula ---
-    function createClausulaBlock(level, html) {
+    function createClausulaBlock(level, html, condicional) {
       const div = document.createElement('div');
       div.className     = 'bloco';
       div.draggable     = true;
       div.dataset.type  = 'clausula';
       div.dataset.level = level;
+      if (condicional) div.dataset.condicional = condicional;
 
       div.appendChild(buildControlesClausula(div));
 
@@ -1087,17 +1317,46 @@
       return div;
     }
 
+    // --- Lê condicional do formulário ---
+    function readCondicional(prefix) {
+      var variavel = document.getElementById('cond-' + prefix + '-variavel').value;
+      if (!variavel) return '';
+      var operador = document.getElementById('cond-' + prefix + '-operador').value;
+      var valor    = document.getElementById('cond-' + prefix + '-valor').value.trim();
+      return variavel + ' ' + operador + ' ' + valor;
+    }
+
+    // --- Validação da condicional no clique ---
+    function validarCondicionalAoAdicionar(prefix) {
+      var variavel = document.getElementById('cond-' + prefix + '-variavel').value;
+      var valor    = document.getElementById('cond-' + prefix + '-valor').value;
+      var erro     = document.getElementById('erro-cond-' + prefix);
+      // Se variavel selecionada sem valor, bloqueia
+      if (variavel && !valor) {
+        erro.textContent   = 'Selecione um valor para a condição, ou redefina para "(sempre exibir)".';
+        erro.style.display = 'block';
+        return false;
+      }
+      // Se valor selecionado sem variavel (estado impossível pela UI, mas por segurança)
+      if (!variavel && valor) {
+        erro.textContent   = 'Selecione uma variável para a condição.';
+        erro.style.display = 'block';
+        return false;
+      }
+      erro.style.display = 'none';
+      return true;
+    }
+
     // --- Botão Adicionar ---
-    document.getElementById('btn-adicionar').addEventListener('click', function() {
-      const tipoEl = document.querySelector('input[name="tipo_bloco"]:checked');
-      if (!tipoEl) return;
+    function handleAdicionar(tipo) {
+      if (!validarCondicionalAoAdicionar(tipo)) return;
 
       let block;
 
-      if (tipoEl.value === 'secao') {
+      if (tipo === 'secao') {
         const html = flattenHTML(document.getElementById('editor-secao'));
         if (!html) return;
-        block = createSecaoBlock(html);
+        block = createSecaoBlock(html, readCondicional('secao'));
 
       } else {
         const html = flattenHTML(document.getElementById('editor-clausula'));
@@ -1106,7 +1365,7 @@
         // Herda o nível do último bloco de cláusula; default "primeiro"
         const clausulas = document.querySelectorAll('#contract-content .bloco[data-type="clausula"]');
         const lastLevel = clausulas.length > 0 ? clausulas[clausulas.length - 1].dataset.level : 'primeiro';
-        block = createClausulaBlock(lastLevel, html);
+        block = createClausulaBlock(lastLevel, html, readCondicional('clausula'));
       }
 
       preview.appendChild(indicator); // garante que o indicador está no final
@@ -1115,6 +1374,18 @@
 
       document.getElementById('editor-secao').innerHTML = '';
       document.getElementById('editor-clausula').innerHTML = '';
+      // Reset conditional fields
+      ['secao', 'clausula'].forEach(function(p) {
+        document.getElementById('cond-' + p + '-variavel').value = '';
+        document.getElementById('cond-' + p + '-valor').value    = '';
+      });
+    }
+
+    document.getElementById('btn-adicionar-secao').addEventListener('click', function() {
+      handleAdicionar('secao');
+    });
+    document.getElementById('btn-adicionar-clausula').addEventListener('click', function() {
+      handleAdicionar('clausula');
     });
 
     // ── Google Sheets API ─────────────────────────────────────────────────
@@ -1141,16 +1412,15 @@
 
     // ── Salvar / carregar templates (Google Sheets) ───────────────────────
 
-    var currentTemplateKey  = null;
-    var currentTemplateName = null;
+    var currentTemplateName = null;  // nome é a chave única agora
     var templateDirty       = false;
     var loadingTemplate     = false;
 
-    function setCurrentTemplate(key, name) {
-      currentTemplateKey  = key;
-      currentTemplateName = name || key;
+    function setCurrentTemplate(name) {
+      currentTemplateName = name || null;
+      document.getElementById('input-nome-template').value = name || '';
       var btn = document.getElementById('btn-salvar-padrao');
-      btn.textContent = key ? 'Salvar alterações' : 'Salvar como padrão';
+      btn.textContent = name ? 'Salvar alterações' : 'Salvar como padrão';
     }
 
     function updateExportButton() {
@@ -1158,7 +1428,7 @@
       document.getElementById('btn-exportar-pdf').disabled  = !hasContent;
       document.getElementById('btn-exportar-html').disabled = !hasContent;
       var btn = document.getElementById('btn-salvar-padrao');
-      if (currentTemplateKey) {
+      if (currentTemplateName) {
         btn.disabled = !templateDirty;
       } else {
         btn.disabled = !hasContent;
@@ -1184,21 +1454,38 @@
 
     // Converte formato Sheets → interno
     function sheetsToInternal(b) {
-      return { type: b.tipo, level: b.nivel || 'primeiro', html: b.conteudo };
+      var condicional = '';
+      if (b.cond_variavel && b.cond_valor) {
+        condicional = b.cond_variavel + ' ' + (b.cond_operador || '==') + ' ' + b.cond_valor;
+      }
+      return {
+        type:        b.tipo_conteudo,
+        level:       'primeiro',     // nível é derivado pela ordem dos blocos
+        html:        b.conteudo,
+        condicional: condicional
+      };
     }
 
     // Converte formato interno → Sheets
     function internalToSheets(b) {
+      var cond = (b.condicional || '').trim();
+      var condVars = { variavel: '', operador: '==', valor: '' };
+      if (cond) {
+        var m = cond.match(/^(\S+)\s+(==|!=|>|<|contains)\s+(.+)$/);
+        if (m) { condVars.variavel = m[1]; condVars.operador = m[2]; condVars.valor = m[3].trim(); }
+      }
       return {
-        tipo:      b.type,
-        nivel:     b.level || 'primeiro',
-        conteudo:  b.html,
-        variaveis: b.type === 'clausula' ? extractVariables(b.html) : ''
+        tipo_conteudo: b.type,
+        conteudo:      b.html,
+        cond_variavel: condVars.variavel,
+        cond_operador: condVars.operador,
+        cond_valor:    condVars.valor
       };
     }
 
     function getBlockContent(block) {
       var p = block.querySelector('p').cloneNode(true);
+      // Remove índice de cláusula
       var idx = p.querySelector('.bloco-indice');
       if (idx) {
         var next = idx.nextSibling;
@@ -1207,16 +1494,38 @@
           next.textContent = next.textContent.replace(/^\s/, '');
         }
       }
+      // Remove índice de seção
+      var secaoIdx = p.querySelector('.secao-indice');
+      if (secaoIdx) secaoIdx.remove();
       return p.innerHTML;
+    }
+
+    // Lê versão do formulário como dois campos separados
+    function getVersaoTipo() {
+      var el = document.querySelector('input[name="versao_template"]:checked');
+      return el ? el.value : '';
+    }
+    function getVersaoNumero() {
+      return document.getElementById('input-versao-numero').value.trim();
+    }
+
+    // Restaura radio + número
+    function setVersaoFields(tipo, numero) {
+      document.querySelectorAll('input[name="versao_template"]').forEach(function(r) {
+        r.checked = r.value === tipo;
+      });
+      document.getElementById('input-versao-numero').value = numero || '';
     }
 
     function extractBlocksData() {
       var result = [];
       document.querySelectorAll('#contract-content .bloco').forEach(function(block) {
         result.push({
-          type:  block.dataset.type,
-          level: block.dataset.level || 'primeiro',
-          html:  getBlockContent(block)
+          type:        block.dataset.type,
+          level:       block.dataset.level || 'primeiro',
+          html:        getBlockContent(block),
+          secao:       block.dataset.secao || '',
+          condicional: block.dataset.condicional || ''
         });
       });
       return result;
@@ -1228,8 +1537,8 @@
       content.querySelectorAll('.bloco').forEach(function(b) { b.remove(); });
       blocksData.forEach(function(data) {
         var block = data.type === 'secao'
-          ? createSecaoBlock(data.html)
-          : createClausulaBlock(data.level, data.html);
+          ? createSecaoBlock(data.html, data.condicional)
+          : createClausulaBlock(data.level, data.html, data.condicional);
         content.insertBefore(block, indicator);
       });
       renumberBlocks();
@@ -1243,33 +1552,42 @@
       document.getElementById('campo-clausula').style.display = 'none';
       document.getElementById('editor-secao').innerHTML    = '';
       document.getElementById('editor-clausula').innerHTML = '';
+      ['secao', 'clausula'].forEach(function(p) {
+        document.getElementById('cond-' + p + '-variavel').value = '';
+        document.getElementById('cond-' + p + '-valor').value    = '';
+        document.getElementById('erro-cond-' + p).style.display  = 'none';
+        var btn = document.getElementById('btn-adicionar-' + p);
+        btn.disabled      = true;
+        btn.style.opacity = '0.4';
+      });
     }
 
-    function addCustomTemplateRadio(name, sheetName) {
+    function addCustomTemplateRadio(name) {
       var list = document.getElementById('custom-templates-list');
-      if (list.querySelector('[data-key="' + sheetName + '"]')) return;
+      if (list.querySelector('[data-key="' + name + '"]')) return;
 
       var br    = document.createElement('br');
       var label = document.createElement('label');
-      label.setAttribute('data-key', sheetName);
+      label.setAttribute('data-key', name);
 
       var radio = document.createElement('input');
       radio.type  = 'radio';
       radio.name  = 'tipo_template';
-      radio.value = sheetName;
+      radio.value = name;
       radio.addEventListener('change', async function() {
         document.getElementById('campos-template').style.display = 'block';
         radio.disabled = true;
         try {
-          var data = await apiGet({ action: 'load', sheet: sheetName });
+          var data = await apiGet({ action: 'load', name: name });
           if (!data.ok) { alert('Erro ao carregar template: ' + (data.error || '')); return; }
-          setCurrentTemplate(sheetName, name);
+          setCurrentTemplate(name);
           loadBlocksData(data.blocks.map(sheetsToInternal));
           document.querySelectorAll('input[name="status_template"]').forEach(function(r) {
             r.checked = r.value === data.status;
           });
-          document.querySelectorAll('input[name="versao_template"]').forEach(function(r) {
-            r.checked = r.value === data.versao;
+          setVersaoFields(data.versaoTipo, data.versaoNumero);
+          document.querySelectorAll('input[name="tipo_contrato"]').forEach(function(r) {
+            r.checked = r.value === data.tipo;
           });
           clearEditorFields();
         } catch(e) {
@@ -1288,10 +1606,10 @@
         if (!confirm('Remover "' + name + '"?')) return;
         del.disabled = true;
         try {
-          await apiPost({ action: 'delete', sheetName: sheetName });
+          await apiPost({ action: 'delete', name: name });
           br.remove();
           label.remove();
-          if (currentTemplateKey === sheetName) setCurrentTemplate(null);
+          if (currentTemplateName === name) setCurrentTemplate(null);
         } catch(err) {
           alert('Erro ao remover template.');
           del.disabled = false;
@@ -1312,7 +1630,7 @@
         var data = await apiGet({ action: 'list' });
         if (data.ok) {
           data.templates.forEach(function(tpl) {
-            addCustomTemplateRadio(tpl.name, tpl.sheetName);
+            addCustomTemplateRadio(tpl.name);
           });
         }
       } catch(e) {
@@ -1322,78 +1640,57 @@
 
     document.getElementById('btn-salvar-padrao').addEventListener('click', async function() {
       var btn      = this;
+      var name     = document.getElementById('input-nome-template').value.trim();
+      var erroNome = document.getElementById('erro-nome-template');
       var statusEl = document.querySelector('input[name="status_template"]:checked');
-      var versaoEl = document.querySelector('input[name="versao_template"]:checked');
+      var tipoEl   = document.querySelector('input[name="tipo_contrato"]:checked');
 
-      if (currentTemplateKey) {
-        btn.disabled    = true;
-        btn.textContent = 'Salvando...';
-        try {
-          var result = await apiPost({
-            action:    'save',
-            sheetName: currentTemplateKey,
-            name:      currentTemplateName,
-            status:    statusEl ? statusEl.value : '',
-            versao:    versaoEl ? versaoEl.value : '',
-            blocks:    extractBlocksData().map(internalToSheets)
-          });
-          if (result.ok) { markClean(); clearEditorFields(); }
-          else alert('Erro ao salvar alterações.');
-        } catch(e) {
-          alert('Erro ao salvar alterações: ' + e.message);
-        } finally {
-          btn.textContent = 'Salvar alterações';
-          updateExportButton();
-        }
-      } else {
-        document.getElementById('input-nome-template').value = '';
-        document.getElementById('modal-salvar').style.display = 'block';
+      if (!name) {
+        erroNome.textContent   = 'Informe um nome para o template.';
+        erroNome.style.display = 'block';
         document.getElementById('input-nome-template').focus();
+        return;
       }
-    });
+      erroNome.style.display = 'none';
 
-    document.getElementById('btn-modal-cancelar').addEventListener('click', function() {
-      document.getElementById('modal-salvar').style.display = 'none';
-    });
-
-    document.getElementById('btn-modal-confirmar').addEventListener('click', async function() {
-      var name = document.getElementById('input-nome-template').value.trim();
-      if (!name) return;
-
-      var btn      = this;
       btn.disabled    = true;
       btn.textContent = 'Salvando...';
 
-      var statusEl = document.querySelector('input[name="status_template"]:checked');
-      var versaoEl = document.querySelector('input[name="versao_template"]:checked');
-
       try {
         var data = await apiPost({
-          action: 'save',
-          name:   name,
-          status: statusEl ? statusEl.value : '',
-          versao: versaoEl ? versaoEl.value : '',
-          blocks: extractBlocksData().map(internalToSheets)
+          action:       'save',
+          name:         name,
+          status:       statusEl ? statusEl.value : '',
+          versaoTipo:   getVersaoTipo(),
+          versaoNumero: getVersaoNumero(),
+          tipo:         tipoEl ? tipoEl.value : '',
+          blocks:       extractBlocksData().map(internalToSheets)
         });
 
         if (!data.ok) { alert('Erro ao salvar template.'); return; }
 
-        document.getElementById('modal-salvar').style.display = 'none';
-        addCustomTemplateRadio(name, data.sheetName);
+        // Se é um novo template (não estava na lista ainda), adiciona o radio
+        if (!currentTemplateName) {
+          addCustomTemplateRadio(name);
+          var newRadio = document.querySelector('input[name="tipo_template"][value="' + name + '"]');
+          if (newRadio) newRadio.checked = true;
+        }
 
-        var newRadio = document.querySelector('input[name="tipo_template"][value="' + data.sheetName + '"]');
-        if (newRadio) newRadio.checked = true;
-        setCurrentTemplate(data.sheetName, name);
+        setCurrentTemplate(name);
         markClean();
-
-        document.getElementById('campos-template').style.display = 'block';
         clearEditorFields();
       } catch(e) {
         alert('Erro ao salvar template: ' + e.message);
       } finally {
         btn.disabled    = false;
-        btn.textContent = 'Salvar';
+        btn.textContent = currentTemplateName ? 'Salvar alterações' : 'Salvar como padrão';
+        updateExportButton();
       }
+    });
+
+    // Limpa erro ao digitar o nome
+    document.getElementById('input-nome-template').addEventListener('input', function() {
+      document.getElementById('erro-nome-template').style.display = 'none';
     });
   </script>
 
