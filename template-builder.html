@@ -1709,9 +1709,13 @@
       btn.textContent = 'Salvando...';
 
       try {
+        var oldName  = currentTemplateName;
+        var renaming = !!(oldName && name !== oldName);
+
         var data = await apiPost({
           action:       'save',
           name:         name,
+          oldName:      renaming ? oldName : undefined,
           status:       statusEl ? statusEl.value : '',
           versaoTipo:   getVersaoTipo(),
           versaoNumero: getVersaoNumero(),
@@ -1721,11 +1725,19 @@
 
         if (!data.ok) { alert('Erro ao salvar template.'); return; }
 
-        // Se é um novo template (não estava na lista ainda), adiciona o radio
-        if (!currentTemplateName) {
+        if (!oldName) {
+          // Novo template: adiciona radio e marca como selecionado
           addCustomTemplateRadio(name);
           var newRadio = document.querySelector('input[name="tipo_template"][value="' + name + '"]');
           if (newRadio) newRadio.checked = true;
+        } else if (renaming) {
+          // Renomear: remove o radio antigo e adiciona um novo com nome correto
+          var oldLabel = document.querySelector('#custom-templates-list [data-key="' + oldName + '"]');
+          var oldBr    = oldLabel ? oldLabel.previousSibling : null;
+          if (oldLabel) { oldLabel.remove(); if (oldBr && oldBr.nodeName === 'BR') oldBr.remove(); }
+          addCustomTemplateRadio(name);
+          var renamedRadio = document.querySelector('input[name="tipo_template"][value="' + name + '"]');
+          if (renamedRadio) renamedRadio.checked = true;
         }
 
         setCurrentTemplate(name);
