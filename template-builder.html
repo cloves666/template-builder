@@ -115,6 +115,7 @@
       user-select: none;
     }
 
+
     /* Campo de edição inline */
     #contract-content .edit-ui {
       font-family: Arial, Helvetica, sans-serif;
@@ -125,6 +126,15 @@
     #contract-content .edit-ui [contenteditable] {
       user-select: text;
     }
+
+    /* Título do template no topo do preview */
+    #preview-titulo {
+      text-align: center;
+      font-weight: bold;
+      font-size: 14pt;
+      margin-bottom: 20px;
+    }
+    #preview-titulo:empty { display: none; }
   </style>
 </head>
 <body style="margin: 0; overflow: hidden;">
@@ -292,7 +302,9 @@
         <h1 style="margin: 0; font-size: 1.25rem;">Preview</h1>
       </div>
       <div id="preview-wrapper" style="flex: 1; min-height: 0; overflow-y: auto;">
-        <div id="contract-content"></div>
+        <div id="contract-content">
+          <div id="preview-titulo"></div>
+        </div>
       </div>
       <div id="modal-loading" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.35); z-index:2000; align-items:center; justify-content:center;">
         <div style="background:#fff; border-radius:6px; padding:24px 32px; box-shadow:0 4px 16px rgba(0,0,0,0.2); text-align:center; font-size:14px; color:#333;">
@@ -332,9 +344,10 @@
       document.getElementById('campos-template').style.display = 'block';
       if (radio.value === 'novo') {
         setCurrentTemplate(null);
-        // Limpa o preview
+        // Limpa o preview e exibe o box branco vazio
         document.querySelectorAll('#contract-content .bloco').forEach(function(b) { b.remove(); });
         renumberBlocks();
+        document.getElementById('preview-wrapper').dataset.empty = 'false';
         // Limpa seleção dos outros campos
         document.querySelectorAll('input[name="status_template"]').forEach(function(r) { r.checked = false; });
         document.querySelectorAll('input[name="versao_template"]').forEach(function(r) { r.checked = false; });
@@ -1218,20 +1231,28 @@
 
     function refreshAllBlockControls() {
       const allBlocos = Array.from(document.querySelectorAll('#contract-content .bloco'));
-      let firstClause  = true;
-      let prevType     = null;
+      let firstClause     = true;
+      let prevType        = null;
+      let prevClauseLevel = null;
       allBlocos.forEach(function(block) {
         if (block.dataset.type !== 'clausula') {
-          prevType = block.dataset.type;
+          prevType        = block.dataset.type;
+          prevClauseLevel = null;
           return;
         }
         const isFirst      = firstClause;
         const afterSection = prevType === 'secao';
         firstClause        = false;
-        prevType           = 'clausula';
-        const levelIdx = LEVELS.indexOf(block.dataset.level);
+        const levelIdx     = LEVELS.indexOf(block.dataset.level);
+
+        // Não permite saltar do segundo para o terceiro se o anterior for primeiro
+        const bloqueadoPorAnterior = levelIdx === 1 && prevClauseLevel === 'primeiro';
+
         block.querySelector('.btn-recuar').disabled  = isFirst || levelIdx === 0;
-        block.querySelector('.btn-avancar').disabled = isFirst || afterSection || levelIdx === LEVELS.length - 1;
+        block.querySelector('.btn-avancar').disabled = isFirst || afterSection || levelIdx === LEVELS.length - 1 || bloqueadoPorAnterior;
+
+        prevType        = 'clausula';
+        prevClauseLevel = block.dataset.level;
       });
     }
 
@@ -1522,9 +1543,15 @@
         document.getElementById('input-nome-template').value.trim() !== currentTemplateName);
     }
 
+    function updatePreviewTitulo() {
+      var nome = document.getElementById('input-nome-template').value.trim();
+      document.getElementById('preview-titulo').textContent = nome;
+    }
+
     function setCurrentTemplate(name) {
       currentTemplateName = name || null;
       document.getElementById('input-nome-template').value = name || '';
+      updatePreviewTitulo();
       var btn = document.getElementById('btn-salvar-padrao');
       btn.textContent = name ? 'Salvar alterações' : 'Salvar template';
       document.getElementById('btn-salvar-novo').style.display = 'none';
@@ -1733,15 +1760,22 @@
       del.addEventListener('click', async function(e) {
         e.stopPropagation();
         if (!confirm('Remover "' + name + '"?')) return;
-        del.disabled = true;
+        document.getElementById('modal-loading').querySelector('div').textContent = 'Removendo template…';
+        setLoadingTemplate(true);
         try {
           await apiPost({ action: 'delete', name: name });
           br.remove();
           label.remove();
-          if (currentTemplateName === name) setCurrentTemplate(null);
+          setCurrentTemplate(null);
+          document.querySelectorAll('input[name="tipo_template"]').forEach(function(r) { r.checked = false; });
+          document.getElementById('campos-template').style.display = 'none';
+          document.querySelectorAll('#contract-content .bloco').forEach(function(b) { b.remove(); });
+          renumberBlocks();
         } catch(err) {
           alert('Erro ao remover template.');
-          del.disabled = false;
+        } finally {
+          setLoadingTemplate(false);
+          document.getElementById('modal-loading').querySelector('div').textContent = 'Carregando template…';
         }
       });
 
@@ -1842,6 +1876,7 @@
       document.getElementById('erro-nome-template').style.display = 'none';
       var btn = document.getElementById('btn-salvar-padrao');
       btn.textContent = (currentTemplateName && !isNameChanged()) ? 'Salvar alterações' : (currentTemplateName ? 'Salvar alterações' : 'Salvar template');
+      updatePreviewTitulo();
       updateExportButton();
     });
 
