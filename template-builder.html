@@ -32,6 +32,10 @@
   </style>
   <style>
     * { font-family: Arial, Helvetica, sans-serif; }
+    h1 { font-size: 1.25rem; }
+    h2 { font-size: 1rem; }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
 
     /* --- Preview: aparência de documento impresso --- */
     #preview-wrapper {
@@ -39,6 +43,23 @@
       padding: 24px 24px 48px;
       min-height: 100%;
       box-sizing: border-box;
+      position: relative;
+    }
+
+    #preview-wrapper[data-empty="true"] #contract-content {
+      display: none;
+    }
+
+    #preview-wrapper[data-empty="true"]::before {
+      content: 'Selecione um template';
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #999;
+      font-size: 14px;
+      pointer-events: none;
     }
 
     #contract-content {
@@ -46,7 +67,7 @@
       max-width: 680px;
       margin: 0 auto;
       padding: 48px 56px 64px;
-      margin-bottom: 100px;
+      margin-bottom: 50px;
       box-shadow: 0 2px 8px rgba(0,0,0,0.18);
       font-family: Arial, Helvetica, sans-serif;
       font-size: 11pt;
@@ -111,13 +132,22 @@
   <div style="display: flex; height: 100vh;">
 
     <!-- Formulário -->
-    <section style="flex: 0 0 40%; padding: 16px; overflow-y: auto;">
+    <section style="flex: 0 0 40%; display: flex; flex-direction: column;">
 
+      <div style="padding: 16px 16px 8px; border-bottom: 1px solid #ddd; flex-shrink: 0;">
+        <h1 style="margin: 0; font-size: 1.25rem;">Contract Template Builder</h1>
+      </div>
+
+      <div style="flex: 1; min-height: 0; overflow-y: auto; padding: 16px;">
       <form>
 
         <!-- ── Seção 1: Templates ── -->
-        <h3 style="margin: 0 0 8px;">Templates</h3>
-        <fieldset>
+        <h2 style="margin: 0 0 8px;">Templates</h2>
+        <fieldset style="position: relative;">
+          <span id="spinner-templates" style="display:none; position:absolute; top:6px; right:6px; align-items:center; gap:6px; font-size:11px; color:#888;">
+            <span style="display:inline-block; width:12px; height:12px; border:2px solid #ccc; border-top-color:#555; border-radius:50%; animation:spin 0.7s linear infinite; flex-shrink:0;"></span>
+            Carregando templates…
+          </span>
           <label><input type="radio" name="tipo_template" value="novo"> Novo template</label>
           <div id="custom-templates-list"></div>
         </fieldset>
@@ -125,7 +155,7 @@
         <div id="campos-template" style="display: none;">
 
           <!-- ── Seção 2: Dados do Template ── -->
-          <h3 style="margin: 20px 0 8px;">Dados do Template</h3>
+          <h2 style="margin: 20px 0 8px;">Dados do Template</h2>
           <fieldset>
             <legend>Nome</legend>
             <input type="text" id="input-nome-template" placeholder="Nome do template" style="width:100%; padding:4px; box-sizing:border-box;">
@@ -159,7 +189,7 @@
           </fieldset>
 
           <!-- ── Seção 3: Conteúdo ── -->
-          <h3 style="margin: 20px 0 8px;">Conteúdo</h3>
+          <h2 style="margin: 20px 0 8px;">Conteúdo</h2>
           <fieldset>
             <legend>Tipo do Conteúdo</legend>
             <label><input type="radio" name="tipo_bloco" value="secao"> Seção</label>
@@ -253,16 +283,23 @@
         </div>
 
       </form>
+      </div>
     </section>
 
     <!-- Preview -->
-    <section style="flex: 0 0 60%; border-left: 1px solid #000; position: relative;">
-      <div style="padding: 16px 16px 8px; border-bottom: 1px solid #ddd;">
-        <h2 style="margin: 0;">Preview</h2>
+    <section style="flex: 0 0 60%; border-left: 1px solid #000; display: flex; flex-direction: column;">
+      <div style="padding: 16px 16px 8px; border-bottom: 1px solid #ddd; flex-shrink: 0;">
+        <h1 style="margin: 0; font-size: 1.25rem;">Preview</h1>
       </div>
-      <div id="preview-wrapper" style="position: absolute; top: 53px; bottom: 53px; left: 0; right: 0; overflow-y: auto;">
+      <div id="preview-wrapper" style="flex: 1; min-height: 0; overflow-y: auto;">
         <div id="contract-content"></div>
       </div>
+      <div id="modal-loading" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.35); z-index:2000; align-items:center; justify-content:center;">
+        <div style="background:#fff; border-radius:6px; padding:24px 32px; box-shadow:0 4px 16px rgba(0,0,0,0.2); text-align:center; font-size:14px; color:#333;">
+          Carregando template…
+        </div>
+      </div>
+
       <div id="modal-link" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.35); z-index:1000; align-items:center; justify-content:center;">
         <div style="background:#fff; border-radius:6px; padding:20px; width:320px; box-shadow:0 4px 16px rgba(0,0,0,0.2);">
           <label style="font-size:13px; font-weight:bold;">URL do link</label><br>
@@ -275,15 +312,14 @@
         </div>
       </div>
 
-      <div style="position: absolute; bottom: 0; left: 0; right: 0; padding: 12px 16px; border-top: 1px solid #ddd; background: #fff; display: flex; justify-content: space-between; align-items: center;">
+      <div style="flex-shrink: 0; padding: 12px 16px; border-top: 1px solid #ddd; background: #fff; display: flex; justify-content: space-between; align-items: center;">
         <div style="display: flex; gap: 6px; align-items: center;">
-          <button id="btn-salvar-padrao" type="button">Salvar template</button>
-          <button id="btn-salvar-novo" type="button" style="display:none;">Salvar novo template</button>
-        </div>
-        <div>
           <button id="btn-exportar-pdf" type="button" disabled>Exportar PDF</button>
-          <span style="display: inline-block; width: 8px;"></span>
           <button id="btn-exportar-html" type="button" disabled>Exportar HTML</button>
+        </div>
+        <div style="display: flex; gap: 6px; align-items: center;">
+          <button id="btn-salvar-novo" type="button" style="display:none;">Salvar novo template</button>
+          <button id="btn-salvar-padrao" type="button">Salvar template</button>
         </div>
       </div>
     </section>
@@ -651,9 +687,10 @@
         }
         const blob = new Blob([bytes], { type: 'application/pdf' });
         const url  = URL.createObjectURL(blob);
+        const nomeTemplate = document.getElementById('input-nome-template').value.trim() || 'contrato';
         const a    = document.createElement('a');
         a.href     = url;
-        a.download = 'contrato.pdf';
+        a.download = nomeTemplate + '.pdf';
         a.click();
         URL.revokeObjectURL(url);
 
@@ -667,34 +704,40 @@
 
     document.getElementById('btn-exportar-html').addEventListener('click', function() {
       // Lê campos do formulário
-      const tipoEl    = document.querySelector('input[name="tipo_template"]:checked');
-      const statusEl  = document.querySelector('input[name="status_template"]:checked');
-      const versaoEl  = document.querySelector('input[name="versao_template"]:checked');
-
-      const tipoLabel   = tipoEl   ? tipoEl.closest('label').textContent.trim()   : '';
-      const statusLabel = statusEl ? statusEl.closest('label').textContent.trim() : '';
-      const versaoLabel = versaoEl ? versaoEl.closest('label').textContent.trim() : '';
+      const nomeTemplate  = document.getElementById('input-nome-template').value.trim() || 'contrato';
+      const tipoEl        = document.querySelector('input[name="tipo_contrato"]:checked');
+      const statusEl      = document.querySelector('input[name="status_template"]:checked');
+      const versaoEl      = document.querySelector('input[name="versao_template"]:checked');
+      const versaoNumero  = document.getElementById('input-versao-numero').value.trim();
 
       const meta = document.createElement('div');
       meta.id = 'template-meta';
-      meta.setAttribute('data-tipo',   tipoEl   ? tipoEl.value   : '');
-      meta.setAttribute('data-status', statusEl ? statusEl.value : '');
-      meta.setAttribute('data-versao', versaoEl ? versaoEl.value : '');
-      meta.innerHTML =
-        '<span data-campo="tipo">'   + tipoLabel   + '</span>' +
-        '<span data-campo="status">' + statusLabel + '</span>' +
-        '<span data-campo="versao">' + versaoLabel + '</span>';
+      meta.setAttribute('data-nome',          nomeTemplate);
+      meta.setAttribute('data-tipo',          tipoEl    ? tipoEl.value    : '');
+      meta.setAttribute('data-status',        statusEl  ? statusEl.value  : '');
+      meta.setAttribute('data-versao-tipo',   versaoEl  ? versaoEl.value  : '');
+      meta.setAttribute('data-versao-numero', versaoNumero);
 
       // Clona contrato e remove UI
       const clone = document.getElementById('contract-content').cloneNode(true);
       clone.querySelectorAll('.bloco-controles, .edit-ui, #drop-indicator').forEach(function(el) { el.remove(); });
       clone.querySelectorAll('.bloco').forEach(function(el) {
-        el.style.outline = '';
-        el.style.boxShadow = '';
-        el.style.cursor = '';
         el.removeAttribute('draggable');
         el.removeAttribute('data-editing');
+        el.removeAttribute('style');
       });
+      // Remove style="" vazios de qualquer elemento no clone
+      clone.querySelectorAll('[style]').forEach(function(el) {
+        if (!el.getAttribute('style').trim()) el.removeAttribute('style');
+      });
+      // Normaliza <b> → <strong> para consistência semântica
+      var bTags;
+      while ((bTags = clone.querySelectorAll('b')).length > 0) {
+        var b = bTags[0];
+        var s = document.createElement('strong');
+        s.innerHTML = b.innerHTML;
+        b.parentNode.replaceChild(s, b);
+      }
 
       const wrapper = document.createElement('div');
       wrapper.appendChild(meta);
@@ -705,13 +748,14 @@
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = 'contrato.html';
+      a.download = nomeTemplate + '.html';
       a.click();
       URL.revokeObjectURL(url);
     });
 
     function renumberBlocks() {
       const allBlocos = Array.from(document.querySelectorAll('#contract-content .bloco'));
+      document.getElementById('preview-wrapper').dataset.empty = allBlocos.length === 0 ? 'true' : 'false';
 
       let forcePrimeiro = true;
       let secaoNum = 0;
@@ -763,6 +807,7 @@
     indicator.id = 'drop-indicator';
     indicator.style.cssText = 'border-top: 2px dashed black; margin: 2px 0; display: none; pointer-events: none;';
     preview.appendChild(indicator);
+    renumberBlocks(); // inicializa estado do placeholder
 
     function nearestBlock(target) {
       while (target && target !== preview) {
@@ -1454,6 +1499,13 @@
     var templateDirty       = false;
     var loadingTemplate     = false;
 
+    function setLoadingTemplate(on) {
+      var modal = document.getElementById('modal-loading');
+      var form  = document.querySelector('form');
+      modal.style.display = on ? 'flex' : 'none';
+      Array.from(form.elements).forEach(function(el) { el.disabled = on; });
+    }
+
     function isNameChanged() {
       return !!(currentTemplateName &&
         document.getElementById('input-nome-template').value.trim() !== currentTemplateName);
@@ -1513,7 +1565,7 @@
       }
       return {
         type:        b.tipo_conteudo,
-        level:       b.nivel || 'primeiro',
+        level:       b.tipo_conteudo === 'clausula' ? (b.nivel || 'primeiro') : '',
         html:        b.conteudo,
         secao:       b.secao_ref || '',
         condicional: condicional
@@ -1586,7 +1638,7 @@
       document.querySelectorAll('#contract-content .bloco').forEach(function(block) {
         result.push({
           type:        block.dataset.type,
-          level:       block.dataset.level || 'primeiro',
+          level:       block.dataset.type === 'clausula' ? (block.dataset.level || 'primeiro') : '',
           html:        getBlockContent(block),
           num:         block.dataset.num   || '',   // número da seção (só seções)
           secao:       block.dataset.secao || '',   // seção pai (só cláusulas)
@@ -1641,7 +1693,7 @@
       radio.value = name;
       radio.addEventListener('change', async function() {
         document.getElementById('campos-template').style.display = 'block';
-        radio.disabled = true;
+        setLoadingTemplate(true);
         try {
           var data = await apiGet({ action: 'load', name: name });
           if (!data.ok) { alert('Erro ao carregar template: ' + (data.error || '')); return; }
@@ -1654,11 +1706,12 @@
           document.querySelectorAll('input[name="tipo_contrato"]').forEach(function(r) {
             r.checked = r.value === data.tipo;
           });
+          syncVersaoVisibility();
           clearEditorFields();
         } catch(e) {
           alert('Erro de conexão ao carregar template.');
         } finally {
-          radio.disabled = false;
+          setLoadingTemplate(false);
         }
       });
 
@@ -1690,7 +1743,12 @@
 
     // Carrega templates do Sheets ao abrir a página
     (async function() {
-      if (!SHEETS_API_URL || SHEETS_API_URL === 'COLE_AQUI_A_URL_DO_WEBAPP') return;
+      var spinner = document.getElementById('spinner-templates');
+      spinner.style.display = 'flex';
+      if (!SHEETS_API_URL || SHEETS_API_URL === 'COLE_AQUI_A_URL_DO_WEBAPP') {
+        spinner.style.display = 'none';
+        return;
+      }
       try {
         var data = await apiGet({ action: 'list' });
         if (data.ok) {
@@ -1700,6 +1758,8 @@
         }
       } catch(e) {
         console.warn('Não foi possível carregar templates do Sheets:', e);
+      } finally {
+        spinner.style.display = 'none';
       }
     })();
 
