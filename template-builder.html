@@ -1506,6 +1506,17 @@
       Array.from(form.elements).forEach(function(el) { el.disabled = on; });
     }
 
+    function showSaveSuccess() {
+      var modal = document.getElementById('modal-loading');
+      var msg   = modal.querySelector('div');
+      msg.textContent = 'Template salvo!';
+      modal.style.display = 'flex';
+      setTimeout(function() {
+        modal.style.display = 'none';
+        msg.textContent = 'Carregando template…';
+      }, 1500);
+    }
+
     function isNameChanged() {
       return !!(currentTemplateName &&
         document.getElementById('input-nome-template').value.trim() !== currentTemplateName);
@@ -1778,8 +1789,8 @@
       }
       erroNome.style.display = 'none';
 
-      btn.disabled    = true;
-      btn.textContent = 'Salvando...';
+      setLoadingTemplate(true);
+      document.getElementById('modal-loading').querySelector('div').textContent = 'Salvando template…';
 
       try {
         var oldName  = currentTemplateName;
@@ -1816,11 +1827,12 @@
         setCurrentTemplate(name);
         markClean();
         clearEditorFields();
+        setLoadingTemplate(false);
+        showSaveSuccess();
       } catch(e) {
+        setLoadingTemplate(false);
         alert('Erro ao salvar template: ' + e.message);
       } finally {
-        btn.disabled    = false;
-        btn.textContent = currentTemplateName ? 'Salvar alterações' : 'Salvar template';
         updateExportButton();
       }
     });
@@ -1849,8 +1861,8 @@
       }
       erroNome.style.display = 'none';
 
-      btn.disabled    = true;
-      btn.textContent = 'Salvando...';
+      setLoadingTemplate(true);
+      document.getElementById('modal-loading').querySelector('div').textContent = 'Salvando template…';
 
       try {
         var data = await apiPost({
@@ -1870,12 +1882,11 @@
           addCustomTemplateRadio(name);
         }
 
-        alert('Novo template "' + name + '" salvo com sucesso!');
+        setLoadingTemplate(false);
+        showSaveSuccess();
       } catch(e) {
+        setLoadingTemplate(false);
         alert('Erro ao salvar template: ' + e.message);
-      } finally {
-        btn.disabled    = false;
-        btn.textContent = 'Salvar novo template';
       }
     });
   </script>
