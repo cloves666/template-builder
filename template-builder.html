@@ -276,7 +276,10 @@
       </div>
 
       <div style="position: absolute; bottom: 0; left: 0; right: 0; padding: 12px 16px; border-top: 1px solid #ddd; background: #fff; display: flex; justify-content: space-between; align-items: center;">
-        <button id="btn-salvar-padrao" type="button">Salvar como padrão</button>
+        <div style="display: flex; gap: 6px; align-items: center;">
+          <button id="btn-salvar-padrao" type="button">Salvar template</button>
+          <button id="btn-salvar-novo" type="button" style="display:none;">Salvar novo template</button>
+        </div>
         <div>
           <button id="btn-exportar-pdf" type="button" disabled>Exportar PDF</button>
           <span style="display: inline-block; width: 8px;"></span>
@@ -1098,10 +1101,33 @@
         exitEditMode(block, flattenHTML(editor), novaCondicional, editUI);
       });
 
+      // Inserção de variável inline no editor de preview
+      var varRow = document.createElement('div');
+      varRow.style.cssText = 'display:flex; gap:6px; align-items:center; margin-top:6px;';
+      var varSel = document.createElement('select');
+      varSel.innerHTML =
+        '<option value="">Selecionar variável...</option>' +
+        '<option value="{{contract_id}}">{{contract_id}}</option>' +
+        '<option value="{{modalidade_garantia}}">{{modalidade_garantia}}</option>';
+      var varBtn = document.createElement('button');
+      varBtn.type        = 'button';
+      varBtn.textContent = 'Inserir variável';
+      varBtn.addEventListener('mousedown', function(e) { e.preventDefault(); });
+      varBtn.addEventListener('click', function() {
+        var val = varSel.value;
+        if (!val) return;
+        editor.focus();
+        document.execCommand('insertText', false, val);
+        varSel.value = '';
+      });
+      varRow.appendChild(varSel);
+      varRow.appendChild(varBtn);
+
       actions.appendChild(btnCancel);
       actions.appendChild(btnSave);
       editUI.appendChild(toolbar);
       editUI.appendChild(editor);
+      editUI.appendChild(varRow);
       editUI.appendChild(condPanel);
       editUI.appendChild(actions);
       block.appendChild(editUI);
@@ -1416,22 +1442,32 @@
     var templateDirty       = false;
     var loadingTemplate     = false;
 
+    function isNameChanged() {
+      return !!(currentTemplateName &&
+        document.getElementById('input-nome-template').value.trim() !== currentTemplateName);
+    }
+
     function setCurrentTemplate(name) {
       currentTemplateName = name || null;
       document.getElementById('input-nome-template').value = name || '';
       var btn = document.getElementById('btn-salvar-padrao');
-      btn.textContent = name ? 'Salvar alterações' : 'Salvar como padrão';
+      btn.textContent = name ? 'Salvar alterações' : 'Salvar template';
+      document.getElementById('btn-salvar-novo').style.display = 'none';
     }
 
     function updateExportButton() {
-      var hasContent = document.querySelector('#contract-content .bloco') !== null;
+      var hasContent   = document.querySelector('#contract-content .bloco') !== null;
+      var nameChanged  = isNameChanged();
+      var btn          = document.getElementById('btn-salvar-padrao');
+      var btnNovo      = document.getElementById('btn-salvar-novo');
       document.getElementById('btn-exportar-pdf').disabled  = !hasContent;
       document.getElementById('btn-exportar-html').disabled = !hasContent;
-      var btn = document.getElementById('btn-salvar-padrao');
       if (currentTemplateName) {
-        btn.disabled = !templateDirty;
+        btn.disabled            = !templateDirty && !nameChanged;
+        btnNovo.style.display   = nameChanged ? 'inline-block' : 'none';
       } else {
-        btn.disabled = !hasContent;
+        btn.disabled            = !hasContent;
+        btnNovo.style.display   = 'none';
       }
     }
 
@@ -1699,14 +1735,63 @@
         alert('Erro ao salvar template: ' + e.message);
       } finally {
         btn.disabled    = false;
-        btn.textContent = currentTemplateName ? 'Salvar alterações' : 'Salvar como padrão';
+        btn.textContent = currentTemplateName ? 'Salvar alterações' : 'Salvar template';
         updateExportButton();
       }
     });
 
-    // Limpa erro ao digitar o nome
+    // Nome do template: limpa erro e reavalia botões ao digitar
     document.getElementById('input-nome-template').addEventListener('input', function() {
       document.getElementById('erro-nome-template').style.display = 'none';
+      var btn = document.getElementById('btn-salvar-padrao');
+      btn.textContent = (currentTemplateName && !isNameChanged()) ? 'Salvar alterações' : (currentTemplateName ? 'Salvar alterações' : 'Salvar template');
+      updateExportButton();
+    });
+
+    // Salvar novo template (fork com novo nome, não afeta o original)
+    document.getElementById('btn-salvar-novo').addEventListener('click', async function() {
+      var btn      = this;
+      var name     = document.getElementById('input-nome-template').value.trim();
+      var erroNome = document.getElementById('erro-nome-template');
+      var statusEl = document.querySelector('input[name="status_template"]:checked');
+      var tipoEl   = document.querySelector('input[name="tipo_contrato"]:checked');
+
+      if (!name) {
+        erroNome.textContent   = 'Informe um nome para o novo template.';
+        erroNome.style.display = 'block';
+        document.getElementById('input-nome-template').focus();
+        return;
+      }
+      erroNome.style.display = 'none';
+
+      btn.disabled    = true;
+      btn.textContent = 'Salvando...';
+
+      try {
+        var data = await apiPost({
+          action:       'save',
+          name:         name,
+          status:       statusEl ? statusEl.value : '',
+          versaoTipo:   getVersaoTipo(),
+          versaoNumero: getVersaoNumero(),
+          tipo:         tipoEl ? tipoEl.value : '',
+          blocks:       extractBlocksData().map(internalToSheets)
+        });
+
+        if (!data.ok) { alert('Erro ao salvar template.'); return; }
+
+        // Adiciona à lista de templates se ainda não existe
+        if (!document.querySelector('input[name="tipo_template"][value="' + name + '"]')) {
+          addCustomTemplateRadio(name);
+        }
+
+        alert('Novo template "' + name + '" salvo com sucesso!');
+      } catch(e) {
+        alert('Erro ao salvar template: ' + e.message);
+      } finally {
+        btn.disabled    = false;
+        btn.textContent = 'Salvar novo template';
+      }
     });
   </script>
 
