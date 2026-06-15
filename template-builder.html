@@ -111,7 +111,7 @@
   <div style="display: flex; height: 100vh;">
 
     <!-- Formulário -->
-    <section style="flex: 1; padding: 16px; overflow-y: auto;">
+    <section style="flex: 0 0 40%; padding: 16px; overflow-y: auto;">
 
       <form>
 
@@ -151,7 +151,7 @@
 
           <br>
 
-          <fieldset>
+          <fieldset id="fieldset-versao">
             <legend>Versão</legend>
             <label><input type="radio" name="versao_template" value="major"> Major (ex: v16)</label><br>
             <label><input type="radio" name="versao_template" value="minor"> Minor (ex: v15.9)</label><br>
@@ -256,7 +256,7 @@
     </section>
 
     <!-- Preview -->
-    <section style="flex: 1; border-left: 1px solid #000; position: relative;">
+    <section style="flex: 0 0 60%; border-left: 1px solid #000; position: relative;">
       <div style="padding: 16px 16px 8px; border-bottom: 1px solid #ddd;">
         <h2 style="margin: 0;">Preview</h2>
       </div>
@@ -322,6 +322,18 @@
       radio.addEventListener('change', markDirty);
     });
     document.getElementById('input-versao-numero').addEventListener('input', markDirty);
+
+    // --- Esconde versão para tipos sem versionamento ---
+    function syncVersaoVisibility() {
+      var tipoEl  = document.querySelector('input[name="tipo_contrato"]:checked');
+      var tipo    = tipoEl ? tipoEl.value : '';
+      var esconde = tipo === 'anexo' || tipo === 'aditivo';
+      document.getElementById('fieldset-versao').style.display = esconde ? 'none' : '';
+    }
+    document.querySelectorAll('input[name="tipo_contrato"]').forEach(function(r) {
+      r.addEventListener('change', syncVersaoVisibility);
+    });
+    syncVersaoVisibility();
 
     // --- Exibe campo de acordo com tipo do bloco ---
     document.querySelectorAll('input[name="tipo_bloco"]').forEach(function(radio) {
@@ -1501,7 +1513,7 @@
       }
       return {
         type:        b.tipo_conteudo,
-        level:       'primeiro',
+        level:       b.nivel || 'primeiro',
         html:        b.conteudo,
         secao:       b.secao_ref || '',
         condicional: condicional
@@ -1523,6 +1535,7 @@
       var variaveis = extractVariables(b.html || '');
       return {
         tipo_conteudo: b.type,
+        nivel:         b.type === 'clausula' ? (b.level || 'primeiro') : '',
         num_secao:     b.type === 'secao' ? (b.num || '') : '',
         secao_ref:     b.type === 'clausula' ? (b.secao || '') : '',
         conteudo:      b.html,
