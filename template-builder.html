@@ -1449,7 +1449,7 @@
     // Extrai variáveis {{...}} de um HTML
     function extractVariables(html) {
       var matches = html.match(/\{\{[^}]+\}\}/g) || [];
-      return Array.from(new Set(matches)).join(', ');
+      return Array.from(new Set(matches)).join(';');
     }
 
     // Mapeamento símbolo ↔ label textual (evita que Sheets interprete como fórmula)
@@ -1467,6 +1467,7 @@
         type:        b.tipo_conteudo,
         level:       'primeiro',
         html:        b.conteudo,
+        secao:       b.secao_ref || '',
         condicional: condicional
       };
     }
@@ -1483,9 +1484,14 @@
           condVars.valor    = m[3].trim();
         }
       }
+      var variaveis = extractVariables(b.html || '');
       return {
         tipo_conteudo: b.type,
+        num_secao:     b.type === 'secao' ? (b.num || '') : '',
+        secao_ref:     b.type === 'clausula' ? (b.secao || '') : '',
         conteudo:      b.html,
+        tem_variavel:  variaveis ? 'Sim' : 'Não',
+        variaveis:     variaveis,
         cond_variavel: condVars.variavel,
         cond_operador: condVars.operador,
         cond_valor:    condVars.valor
@@ -1533,7 +1539,8 @@
           type:        block.dataset.type,
           level:       block.dataset.level || 'primeiro',
           html:        getBlockContent(block),
-          secao:       block.dataset.secao || '',
+          num:         block.dataset.num   || '',   // número da seção (só seções)
+          secao:       block.dataset.secao || '',   // seção pai (só cláusulas)
           condicional: block.dataset.condicional || ''
         });
       });
